@@ -18,9 +18,11 @@ It does not drive the browser itself. It sits on top of whatever your agent alre
 
 ### 1. The extension
 
-1. Download or clone this repository.
+1. Download `over-the-shoulder-<version>.zip` from the
+   [latest release](https://github.com/ahmadrazainbox/over-the-shoulder/releases/latest) and unzip it
+   (or clone this repository and use its `extension` folder).
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the
-   `extension` folder.
+   unzipped folder.
 3. Pin **Over the Shoulder** to the toolbar.
 
 It runs on `localhost`, `127.0.0.1` and `*.test` out of the box. For any other site, open that site, click
@@ -89,6 +91,12 @@ npm test
 The tests load the extension into Playwright's Chromium and check the overlay (hovers, clicks, typing,
 shadow DOM, iframes, single-page navigation, the step event, voice), the popup (site detection, enabling a
 site, voice settings) and site registration (enabled sites get the overlay, removed ones lose it).
+
+## Releases
+
+Versions follow [semantic versioning](https://semver.org): 0.1 Claude, 0.2 adds Codex, 0.3 adds Google
+Antigravity, 1.0 is the first Chrome Web Store release. Each release is a `v<version>` tag with the
+extension zip attached; see [CHANGELOG.md](CHANGELOG.md).
 
 ## Author
 
