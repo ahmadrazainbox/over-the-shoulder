@@ -5,19 +5,19 @@
 AI coding agents write code fast. Seeing what the change actually does in the running app is the slow
 part. Over the Shoulder lets your agent show you, in your own Chrome, one visible step at a time:
 
-- a **Chrome extension** that shows where every agent hover, click and keystroke lands (a spotlight, a
-  ripple, an outline), with step numbers, finding labels and optional spoken narration;
+- a **Chrome extension** that shows where the agent's clicks and typing land (an outline and a ripple;
+  hovers too, best effort), with step numbers, finding labels and optional spoken narration;
 - a **skill** that tells the agent to walk you through its change in the real app, tie each visible
   difference back to the code (`file:line`), and finish with a QA report.
 
 It does not drive the browser itself. It sits on top of whatever your agent already uses.
 
-![The overlay on a demo invoice page: the changed total outlined in red with step badge 3 and a finding label](docs/screenshot.png)
+![Over the Shoulder: the changed total on a demo invoice page, outlined in red with step badge 3 and a finding label. Works with Claude Code + Claude in Chrome; Codex and Google Antigravity coming soon.](docs/hero.png)
 
-*Claude in Chrome walking through a change on a small demo app: the changed total is outlined, numbered,
-and labelled with what changed and where in the code.*
+*Screenshot from a demo invoice app, with sample data: the extension outlines the changed total, numbers the
+step and labels what changed and where in the code.*
 
-> Status: 0.1.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are next.
+> Status: 0.1.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
 
 ## Install
 
