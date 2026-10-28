@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Over the Shoulder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "See what your AI agent did, not just what it wrote: shows where an agent's hovers, clicks and typing land, and can speak each step.",
   "minimum_chrome_version": "121",
   "icons": {

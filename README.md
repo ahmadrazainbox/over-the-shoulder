@@ -12,7 +12,12 @@ part. Over the Shoulder lets your agent show you, in your own Chrome, one visibl
 
 It does not drive the browser itself. It sits on top of whatever your agent already uses.
 
-> Status: 0.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are next.
+![The overlay on a demo invoice page: the changed total outlined in red with step badge 3 and a finding label](docs/screenshot.png)
+
+*Claude in Chrome walking through a change on a small demo app: the changed total is outlined, numbered,
+and labelled with what changed and where in the code.*
+
+> Status: 0.1.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are next.
 
 ## Install
 
