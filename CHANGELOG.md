@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-29)
+
+First release.
+
 
 - Overlay: spotlight on the agent's hover, ripple and outline on clicks, outline on typing after the
   agent's own hover or click, step badge, finding label, corner toast. The developer's own mouse and
