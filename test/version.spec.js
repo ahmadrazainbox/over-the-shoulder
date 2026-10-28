@@ -18,5 +18,6 @@ test('every file carries the same version, and the changelog starts with it', as
     expect(version, file).toBe(pkg.version);
   }
   const changelog = await readFile(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
-  expect(changelog.match(/^## (\S+)/m)?.[1], 'first CHANGELOG entry').toBe(pkg.version);
+  // Changes waiting for the next release sit under "## Unreleased" above it.
+  expect(changelog.match(/^## (?!Unreleased)(\S+)/m)?.[1], 'latest released CHANGELOG entry').toBe(pkg.version);
 });
