@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 (2026-10-29)
 
 - New icon: a white pointer acting on a red-outlined target, the overlay itself. Replaces the red ring,
   which looked like a record button. The 16px toolbar icon has its own bolder drawing.
