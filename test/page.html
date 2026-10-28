@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Over the Shoulder test page</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 40px; max-width: 720px; }
+    section { margin: 0 0 32px; }
+    button, input, select { font: inherit; padding: 6px 10px; }
+    #far { margin-left: 360px; }
+    iframe { width: 100%; height: 120px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Over the Shoulder test page</h1>
+
+  <section>
+    <h2>Buttons</h2>
+    <button id="save">Save</button>
+    <button id="far">Far button</button>
+    <a id="link" href="#details">Details link</a>
+  </section>
+
+  <section>
+    <h2>Form</h2>
+    <label>Name <input id="name" autocomplete="off"></label>
+    <label>Notes <textarea id="notes" rows="2"></textarea></label>
+    <label>Status
+      <select id="status"><option>Open</option><option>Closed</option></select>
+    </label>
+  </section>
+
+  <section>
+    <h2>Shadow DOM</h2>
+    <shadow-card id="card"></shadow-card>
+  </section>
+
+  <section>
+    <h2>Single-page navigation</h2>
+    <button id="nav">Go to /next without a reload</button>
+    <p id="where"></p>
+  </section>
+
+  <section>
+    <h2>Iframe</h2>
+    <iframe id="frame" title="Inner frame" src="frame.html"></iframe>
+  </section>
+
+  <script>
+    customElements.define('shadow-card', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = '<div style="padding:12px;border:1px solid #ccc;width:320px">'
+          + '<p>Inside a shadow root</p><button id="inner">Inner button</button></div>';
+      }
+    });
+    document.getElementById('nav').onclick = () => {
+      history.pushState({}, '', location.pathname.replace(/[^/]*$/, 'next'));
+      document.getElementById('where').textContent = 'Now at ' + location.pathname;
+    };
+  </script>
+</body>
+</html>

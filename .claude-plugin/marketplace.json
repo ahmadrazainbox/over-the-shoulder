@@ -1,0 +1,11 @@
+{
+  "name": "over-the-shoulder",
+  "owner": { "name": "Ahmad Raza" },
+  "plugins": [
+    {
+      "name": "over-the-shoulder",
+      "source": "./plugin",
+      "description": "Walk the developer through your code change in their real Chrome, one visible step at a time."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "over-the-shoulder",
+  "version": "0.1.0",
+  "description": "Walk the developer through your code change in their real Chrome, one visible step at a time, with the Over the Shoulder extension showing where each action lands.",
+  "author": {
+    "name": "Ahmad Raza",
+    "url": "https://armunir.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "browser",
+    "chrome",
+    "qa",
+    "walkthrough",
+    "demo"
+  ],
+  "homepage": "https://armunir.com"
+}

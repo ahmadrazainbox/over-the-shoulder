@@ -1,0 +1,15 @@
+{
+  "name": "over-the-shoulder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "See what your AI agent did, not just what it wrote.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "icons": "node scripts/make-icons.mjs",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
