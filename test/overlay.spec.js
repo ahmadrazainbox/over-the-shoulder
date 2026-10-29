@@ -411,10 +411,14 @@ for (const zoom of ['1.5', '0.8']) {
     await agentHover(page, '#save');
     await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
     await expectSpotOn(page, '#save');
-    await send(page, { step: 1 });
+    await send(page, { step: 1, label: 'Under zoom' });
     const target = await page.locator('#save').evaluate((el) => el.getBoundingClientRect().toJSON());
-    const { badge } = await overlay(page);
+    const { badge, label } = await overlay(page);
     expect(Math.abs(badge.x - (target.right + 2))).toBeLessThan(3);
+    expect(Math.abs(badge.y - Math.max(4, target.top - 16))).toBeLessThan(3);
+    // The label sits just below its target, lined up with its left edge.
+    expect(Math.abs(label.x - target.left)).toBeLessThan(3);
+    expect(Math.abs(label.y - (target.bottom + 12))).toBeLessThan(3);
   });
 }
 
@@ -437,12 +441,15 @@ test('an overlay left behind by a reloaded extension is removed, so there is onl
 test('after the extension is reloaded, the old overlay removes itself instead of drawing', async ({ page, worker }) => {
   await send(page, { step: 1 });
   expect(await page.locator('[data-over-the-shoulder]').count()).toBe(1);
+  await page.evaluate(() => { window.oldHost = document.querySelector('[data-over-the-shoulder]'); });
   await worker.evaluate(() => chrome.runtime.reload()).catch(() => { /* the worker goes away */ });
-  // The old copy notices on its next event; sent again until it has, however long the reload takes.
+  // The old copy notices on its next event; sent again until it has, however long the reload takes. Chrome
+  // may also put the new copy into the tab, so only the old overlay is watched, and never two are left.
   await expect.poll(async () => {
     await send(page, { step: 2 });
-    return page.locator('[data-over-the-shoulder]').count();
-  }, { timeout: 10000 }).toBe(0);
+    return page.evaluate(() => window.oldHost.isConnected);
+  }, { timeout: 10000 }).toBe(false);
+  expect(await page.locator('[data-over-the-shoulder]').count()).toBeLessThanOrEqual(1);
 });
 
 test("the page's own CSS cannot hide the overlay", async ({ page }) => {
