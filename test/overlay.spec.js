@@ -107,6 +107,88 @@ test('a lone jump followed straight away by more moves is the hand, and is taken
   expect((await overlay(page)).spot).toBeNull();
 });
 
+test('an agent click while the hand keeps moving elsewhere is the agent\'s, and so is the typing after it', async ({ page }) => {
+  // The hand moves on the right; between two of its moves the agent's pointer jumps to the field and
+  // clicks, then the hand's next move lands back near where it was.
+  await page.mouse.move(800, 500);
+  await page.mouse.move(820, 520, { steps: 6 });
+  const { x, y } = await centre(page, '#name');
+  await page.mouse.click(x, y);
+  await page.mouse.move(824, 524);
+  await page.mouse.move(840, 540, { steps: 4 });
+  await page.keyboard.type('agent');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action !== 'step').map((entry) => `${entry.action} ${entry.by}`)).toEqual(
+    expect.arrayContaining(['click agent', 'type agent']),
+  );
+  expect(log.find((entry) => entry.action === 'click')).toMatchObject({ on: 'textbox "Name"', by: 'agent' });
+  await expectSpotOn(page, '#name');
+});
+
+test('the mouse coming back into the page after a pause, and moving on, is taken back, and typing is not drawn', async ({ page }) => {
+  // From the recorded trace: two still moves where the pointer re-enters, then a stream moving away.
+  await page.locator('#name').focus();
+  await page.mouse.move(100, 800);
+  await page.waitForTimeout(300);
+  await page.mouse.move(900, 300);
+  await page.waitForTimeout(30);
+  await page.mouse.move(790, 380);
+  for (let i = 1; i <= 6; i++) { await page.mouse.move(790 - i * 10, 380 + i * 5); }
+  await page.waitForTimeout(100);
+  expect((await overlay(page)).spot).toBeNull();
+  await page.keyboard.type('mine');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action === 'type')).toEqual([]);
+});
+
+test("the developer's own click soon after a big step of their own is theirs", async ({ page }) => {
+  // The agent presses within a few ms of its jump; a person pressing 25 ms after a 210px step is the hand.
+  const { x, y } = await centre(page, '#name');
+  await page.mouse.move(x + 210, y + 10);
+  await page.mouse.move(x + 210, y, { steps: 5 });
+  await page.mouse.move(x, y);
+  await page.waitForTimeout(25);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.keyboard.type('mine');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => ['click', 'type'].includes(entry.action))).toEqual([]);
+});
+
+test("the developer's own click after a pause, then a fast move away, keeps their typing undrawn", async ({ page }) => {
+  const { x, y } = await centre(page, '#name');
+  await page.mouse.move(x - 30, y);
+  await page.mouse.move(x, y, { steps: 6 });
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  for (const dx of [100, 190, 250, 290, 310]) {
+    await page.mouse.move(x + dx, y);
+    await page.waitForTimeout(16);
+  }
+  await page.keyboard.type('mine');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action === 'type')).toEqual([]);
+});
+
+test("the developer's own click that ends a fast flick, after they stop, is theirs", async ({ page }) => {
+  // A person stops before pressing; the agent presses a few ms after its one move.
+  const { x, y } = await centre(page, '#name');
+  await page.mouse.move(x + 640, y);
+  await page.waitForTimeout(300);
+  await page.mouse.move(x + 620, y, { steps: 5 });
+  for (const dx of [500, 300, 0]) {
+    await page.mouse.move(x + dx, y);
+    await page.waitForTimeout(16);
+  }
+  await page.waitForTimeout(400);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.keyboard.type('mine');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => ['click', 'type'].includes(entry.action))).toEqual([]);
+});
+
 test('a "lit" notice from a window that is not one of its frames is ignored', async ({ page, context }) => {
   await agentHover(page, '#save');
   await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();

@@ -20,7 +20,8 @@ This skill is written for extension version 0.1.1.
    signed in as. Wait for the developer to say go, unless they already asked you to just start.
 2. Open or reuse a tab on the site. The extension runs on `localhost`, `127.0.0.1` and `*.test` by default;
    any other site needs **Enable on this site** in the extension's popup. Ask the developer to do that if
-   needed. You cannot click Chrome's own permission dialog.
+   needed. You cannot click Chrome's own permission dialog. Wait until the page has finished loading
+   (`document.readyState` is `complete` and the content you expect is there) before the first step.
 3. Check the overlay before the first step: send a step event with nothing lit, e.g.
    `{ step: 0, label: 'Overlay check' }`, and take a screenshot; a toast should show in the bottom-right
    corner. Then hover the first target and screenshot again for the red outline. A hover that lands close
@@ -81,7 +82,9 @@ already does that.
 **Show the change** (the default after you changed code). Show the developer what your change does in the
 running app.
 1. From the diff, list the screens and flows it touches, and what should look or behave differently.
-2. Where it helps, show the old behaviour first (the bug, the old screen), then the new.
+2. Where it helps, show the old behaviour first (the bug, the old screen), then the new. Never stash,
+   reset, check out or otherwise touch the developer's work to get the old behaviour back: describe it,
+   or show it from somewhere it already runs (a staging site, a screenshot), or ask.
 3. For each visible difference, say which code caused it: "Step 4: this total now comes from
    `app/Billing/InvoiceTotal.php:42`."
 4. Include at least one edge the change could break (empty state, a long value, a second user role).
