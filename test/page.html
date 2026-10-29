@@ -10,6 +10,8 @@
     button, input, select { font: inherit; padding: 6px 10px; }
     #far { margin-left: 360px; }
     iframe { width: 100%; height: 120px; border: 1px solid #ccc; }
+    /* A fixed width, so the hop between the two fields stays short with any system font. */
+    #pair input { width: 50px; box-sizing: border-box; margin: 0; }
   </style>
 </head>
 <body>
@@ -49,7 +51,7 @@
 
   <section id="pair">
     <h2>Neighbouring fields</h2>
-    <input id="first" size="4" aria-label="First name"><input id="last" size="4" aria-label="Last name">
+    <input id="first" aria-label="First name"><input id="last" aria-label="Last name">
   </section>
 
   <section>
