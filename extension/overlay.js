@@ -299,6 +299,8 @@
   let lastMoveAt = -Infinity;
   let streak = 0;
   let hand = null;
+  let movedTo = null;
+  let jumpedAt = -Infinity;
   let agent = null;
   let litByMoveAt = -Infinity;
   // Who last pointed at or clicked something: typing is shown only after the agent's own hover or click,
@@ -312,6 +314,8 @@
     const now = performance.now();
     const lone = now - lastMoveAt > 120;
     lastMoveAt = now;
+    jumpedAt = near(movedTo, e, 200) ? -Infinity : e.timeStamp;
+    movedTo = { x: e.clientX, y: e.clientY };
     streak = lone ? 1 : streak + 1;
     const moved = Math.hypot(e.movementX, e.movementY);
     if (!lone && moved > 0 && now - litByMoveAt < 250) {
@@ -330,9 +334,15 @@
 
   // A click is the developer's own when it lands where their hand has been moving (a stream of moves, not
   // one lone hop, which is how a Playwright click arrives). Those are skipped unless "show my clicks" is on.
+  // But a press within 15 ms (by input time, so a busy page cannot squeeze the gap) of a move that jumped
+  // more than 200px is the agent's, even in the middle of the developer's own stream (they can move their
+  // mouse while the agent acts). In real traces Claude in Chrome pressed 0.5 to 3 ms after its one move,
+  // which landed 400px or more from the developer's pointer; of about 1,400 hand steps none was over 200px,
+  // and the developer's presses came after a still move. A developer who clicks within a frame of such a
+  // flick is taken for the agent; an agent click landing within 200px of the moving hand is missed.
   addEventListener('pointerdown', (e) => {
     if (gone() || !e.isTrusted) { return; }
-    const mine = near(hand, e, 4) && hand.streak >= 3;
+    const mine = e.timeStamp - jumpedAt >= 15 && near(hand, e, 4) && hand.streak >= 3;
     acted(mine ? 'hand' : 'agent');
     if (mine && !showMine) { return; }
     if (!mine) { agent = { x: e.clientX, y: e.clientY }; }

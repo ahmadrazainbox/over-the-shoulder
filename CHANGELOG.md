@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- The agent's clicks show while the developer moves their own mouse (#8): a press within 15 ms of a move
+  that jumped more than 200 px to it is the agent's, so the click and the typing after it are drawn (before,
+  an agent move within 120 ms of a hand move counted as the hand's, and so did its click). Hovers while
+  the developer's mouse moves are still not lit, nor is an agent click within 200 px of the moving pointer;
+  a developer who clicks within a frame of a flick that long would be taken for the agent.
+  Found with real Claude in Chrome traces, recorded in `test/traces/` and replayed in tests through
+  Chrome's input layer. The skill notes what is not drawn (`javascript_tool` clicks, keys outside a field,
+  scrolls), waits for the page to load before the first step, and never stashes, resets or checks out the
+  developer's work to show the old behaviour.
 - CI: the Playwright tests run on every pull request and on pushes to `main` (GitHub Actions).
 - Issue templates (bug report, feature request) and a pull request template.
 - Positioning fixes (#7): outlines and badges land on their target when a page sets CSS `zoom` on its

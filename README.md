@@ -99,7 +99,9 @@ npm test
 
 The tests load the extension into Playwright's Chromium and check the overlay (hovers, clicks, typing,
 shadow DOM, iframes, single-page navigation, the step event, voice), the popup (site detection, enabling a
-site, voice settings) and site registration (enabled sites get the overlay, removed ones lose it).
+site, voice settings) and site registration (enabled sites get the overlay, removed ones lose it). They
+also replay real Claude in Chrome sessions, recorded with the developer's own mouse still and moving, through
+Chrome's input layer ([test/traces](test/traces/README.md)).
 
 ## Releases
 
