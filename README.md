@@ -17,7 +17,7 @@ It does not drive the browser itself. It sits on top of whatever your agent alre
 *Screenshot from a demo invoice app, with sample data: the extension outlines the changed total, numbers the
 step and labels what changed and where in the code.*
 
-> Status: 0.1.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
+> Status: 0.2.0, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
 
 ## Install
 
@@ -105,8 +105,8 @@ Chrome's input layer ([test/traces](test/traces/README.md)).
 
 ## Releases
 
-Versions follow [semantic versioning](https://semver.org): 0.1 Claude, 0.2 adds Codex, 0.3 adds Google
-Antigravity, 1.0 is the first Chrome Web Store release. Each release is a `v<version>` tag with the
+Versions follow [semantic versioning](https://semver.org): 0.1 Claude, 0.2 stable on Claude, 0.3 adds
+Codex, 0.4 adds Google Antigravity, 1.0 is the first Chrome Web Store release. Each release is a `v<version>` tag with the
 extension zip attached; see [CHANGELOG.md](CHANGELOG.md).
 
 ## Author

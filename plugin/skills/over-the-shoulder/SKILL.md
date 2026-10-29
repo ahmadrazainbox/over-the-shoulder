@@ -12,7 +12,7 @@ The Over the Shoulder Chrome extension draws from your real input events: a hove
 click leaves a ripple, typing outlines the field. You add step numbers, finding labels and spoken lines
 through one page event. Tool names for each browser agent are in `references/tools.md`.
 
-This skill is written for extension version 0.1.1.
+This skill is written for extension version 0.2.0.
 
 ## 1. Before the first step
 
