@@ -31,10 +31,16 @@ through one page event. Tool names for each browser agent are in `references/too
 ## 2. Every step
 
 - **Before:** one line in chat: the point, what is about to happen, and where to look.
-- **Hover** the target, then send the step number (and the spoken line, if voice is on):
+- **Hover** the target, then send the step number with the target it belongs to (and the spoken line, if
+  voice is on):
   ```js
-  window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 4, say: 'Now I save the invoice. Watch the total.' }) }))
+  window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 4, selector: '#save-invoice', say: 'Now I save the invoice. Watch the total.' }) }))
   ```
+  Name the target with `selector`: an id, `name` or `aria-label` you saw in `read_page`, such as
+  `'[aria-label="Total"]'`. Do not pass your hover or click coordinates as `at`: browser tools scale them
+  from screenshot pixels, so they do not match the page's own (see `references/tools.md`). Without a
+  `selector`, a step after a short hover hop could land on the previous step's element; the overlay then
+  shows it in the corner toast rather than guess.
 - **Pause** 1 to 2 seconds so the developer sees the spotlight (the wait action in `references/tools.md`).
 - **Act** on the same target with the browser's own input: click or type on the same ref or coordinates.
   Never click or type through page JavaScript; the overlay only sees real input, and so should the test.
@@ -46,7 +52,10 @@ through one page event. Tool names for each browser agent are in `references/too
 `detail` must be a JSON string (the page and the extension run in separate JavaScript worlds). Fields:
 `step` (number or short text, shown as a badge), `label` (a finding, up to 200 characters, shown beside
 the target until the next one), `say` (up to 300 characters, spoken only if the developer switched voice
-on in the popup). With nothing lit, the step and label show as a toast in the corner.
+on in the popup), `selector` (the step's own target in the top page; one that is not found sends the step
+to the toast; `at: { x, y }` in the page's CSS pixels also works, for tools that use those). With nothing
+lit, the step and label show as a toast in the corner. A new step with nothing lit since the last one also
+goes to the toast; the same step sent again keeps its target.
 
 Use `label` only for findings (a wrong figure, a confusing word), not to describe every step; the chat
 already does that.

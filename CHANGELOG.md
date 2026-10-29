@@ -4,6 +4,12 @@
 
 - CI: the Playwright tests run on every pull request and on pushes to `main` (GitHub Actions).
 - Issue templates (bug report, feature request) and a pull request template.
+- Step badges land on the right element (#5): a step event can name its own target with `selector` (or
+  `at: { x, y }` in the page's CSS pixels); a new step with nothing lit since the last one shows in the
+  corner toast instead of on the previous step's element; a target that is not found also goes to the
+  toast; every step event raises the overlay above a dialog or popover opened by the agent's click. The
+  skill sends a `selector` (Claude in Chrome's coordinates are scaled screenshot pixels, so they are not
+  used as `at`).
 
 ## 0.1.1 (2026-10-29)
 

@@ -10,6 +10,8 @@
     button, input, select { font: inherit; padding: 6px 10px; }
     #far { margin-left: 360px; }
     iframe { width: 100%; height: 120px; border: 1px solid #ccc; }
+    /* A fixed width, so the hop between the two fields stays short with any system font. */
+    #pair input { width: 50px; box-sizing: border-box; margin: 0; }
   </style>
 </head>
 <body>
@@ -47,6 +49,17 @@
     <iframe id="frame" title="Inner frame" src="frame.html"></iframe>
   </section>
 
+  <section id="pair">
+    <h2>Neighbouring fields</h2>
+    <input id="first" aria-label="First name"><input id="last" aria-label="Last name">
+  </section>
+
+  <section>
+    <h2>Dialog</h2>
+    <button id="open-dialog">Open dialog</button>
+    <dialog id="dialog"><p>A modal dialog</p><button id="dialog-ok">OK</button></dialog>
+  </section>
+
   <script>
     customElements.define('shadow-card', class extends HTMLElement {
       connectedCallback() {
@@ -59,6 +72,7 @@
       history.pushState({}, '', location.pathname.replace(/[^/]*$/, 'next'));
       document.getElementById('where').textContent = 'Now at ' + location.pathname;
     };
+    document.getElementById('open-dialog').onclick = () => document.getElementById('dialog').showModal();
   </script>
 </body>
 </html>
