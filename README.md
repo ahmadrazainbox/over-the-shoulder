@@ -30,6 +30,9 @@ step and labels what changed and where in the code.*
    unzipped folder.
 3. Pin **Over the Shoulder** to the toolbar.
 
+It needs Chrome 128 or later. After you update or reload the extension, the old overlay removes itself;
+if an open tab then shows none, reload that tab.
+
 It runs on `localhost`, `127.0.0.1` and `*.test` out of the box. For any other site, open that site, click
 the toolbar icon and press **Enable on this site**.
 

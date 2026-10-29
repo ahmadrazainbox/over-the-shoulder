@@ -20,6 +20,9 @@
 (() => {
   if (window.__overTheShoulder) { return; }
   window.__overTheShoulder = true;
+  // An overlay left by an earlier copy of this script (the extension was reloaded or updated, and the
+  // tab got the new copy) is removed, so there is only ever one.
+  document.querySelectorAll('[data-over-the-shoulder]').forEach((old) => old.remove());
 
   const EVENT = 'over-the-shoulder';
   const DIM_MS = 1500;
@@ -40,8 +43,11 @@
   // cannot block it (constructed stylesheets and CSSOM writes are not inline style markup).
   const host = document.createElement('div');
   host.setAttribute('data-over-the-shoulder', '');
-  host.style.cssText = 'all:initial;position:fixed;inset:0;width:100vw;height:100vh;margin:0;padding:0;border:0;'
-    + 'background:transparent;overflow:visible;pointer-events:none;z-index:2147483647;display:block;';
+  // Every rule is !important, so a page rule such as `div { display: none !important }` cannot hide it.
+  host.style.cssText = ['all:initial', 'position:fixed', 'inset:0', 'width:100vw', 'height:100vh', 'margin:0',
+    'padding:0', 'border:0', 'background:transparent', 'overflow:visible', 'pointer-events:none',
+    'z-index:2147483647', 'display:block', 'visibility:visible', 'opacity:1', 'transform:none', 'filter:none']
+    .map((rule) => `${rule} !important`).join(';');
   const root = host.attachShadow({ mode: 'open' });
   const css = `
     * { box-sizing: border-box; }
@@ -86,8 +92,17 @@
   // <dialog> or popover; z-index alone cannot rise above those. Raised again on each new target and on
   // every step event.
   if ('popover' in host) { host.popover = 'manual'; }
+  // A page that sets CSS zoom on its root would scale the overlay too, while element boxes are measured in
+  // the viewport's own pixels (standardised zoom, Chrome 128 and later); the overlay undoes that zoom so the
+  // two match. Checked again while drawing, for a page that changes its zoom.
+  let fitted = '';
+  const fit = () => {
+    fitted = getComputedStyle(document.documentElement).zoom;
+    host.style.setProperty('zoom', String(1 / (parseFloat(fitted) || 1)), 'important');
+  };
   const raise = () => {
     if (!host.isConnected) { document.documentElement.append(host); }
+    fit();
     try { host.hidePopover?.(); host.showPopover?.(); } catch { /* not supported or not connected */ }
   };
 
@@ -96,13 +111,18 @@
   const INTERACTIVE = 'a,button,input,select,textarea,label,summary,[role=button],[role=link],[role=tab],'
     + '[role=menuitem],[role=option],[role=checkbox],[role=switch],[role=radio],[contenteditable]:not([contenteditable=false]),td,th,li';
   const editable = (el) => el instanceof Element && (el.matches('input,textarea,select') || el.isContentEditable);
+  const fits = (node) => {
+    if (node === document.body || node === document.documentElement) { return false; }
+    const r = node.getBoundingClientRect();
+    return editable(node) || r.width * r.height <= (innerWidth * innerHeight) / 2;
+  };
+  // A button, link or row too large to outline (a list item taller than the screen): the element that
+  // was hit, if that one is small enough.
   const pick = (el) => {
     if (!(el instanceof Element) || el === host) { return null; }
     const chosen = el.closest(INTERACTIVE) || el;
-    if (chosen === document.body || chosen === document.documentElement) { return null; }
-    const r = chosen.getBoundingClientRect();
-    if (!editable(chosen) && r.width * r.height > (innerWidth * innerHeight) / 2) { return null; }
-    return chosen;
+    if (fits(chosen)) { return chosen; }
+    return chosen !== el && fits(el) ? el : null;
   };
   // The real target, inside an open shadow root if there is one, not its host.
   const hit = (e) => e.composedPath?.()[0] ?? e.target;
@@ -136,8 +156,9 @@
       last = '';
     }
     if (!target) { return; }
+    if (getComputedStyle(document.documentElement).zoom !== fitted) { fit(); }
     const r = target.getBoundingClientRect();
-    const key = `${r.left}|${r.top}|${r.width}|${r.height}|${innerWidth}|${innerHeight}|${shown(label)}`;
+    const key = `${r.left}|${r.top}|${r.width}|${r.height}|${innerWidth}|${innerHeight}|${shown(label)}|${fitted}`;
     if (key === last) { return; }
     last = key;
     Object.assign(spot.style, { left: `${r.left - 6}px`, top: `${r.top - 6}px`, width: `${r.width + 12}px`, height: `${r.height + 12}px` });
@@ -151,7 +172,12 @@
       });
     }
   };
-  const loop = () => { draw(); follow = target ? requestAnimationFrame(loop) : 0; };
+  // Stops at once when this copy has lost the extension, so an outline it drew does not linger.
+  const loop = () => {
+    if (gone()) { return; }
+    draw();
+    follow = target ? requestAnimationFrame(loop) : 0;
+  };
 
   function end() {
     target = null;
@@ -245,6 +271,20 @@
     if (!isTop) { try { window.top.postMessage({ overTheShoulder: 'lit' }, '*'); } catch { /* detached */ } }
   };
 
+  // After the extension is reloaded or updated, this copy loses its connection to it. It then removes its
+  // overlay and does nothing more, instead of drawing beside the new copy.
+  let dead = false;
+  const gone = () => {
+    if (dead) { return true; }
+    let alive = false;
+    try { alive = Boolean(chrome.runtime?.id); } catch { /* invalidated */ }
+    if (alive) { return false; }
+    dead = true;
+    end();
+    host.remove();
+    return true;
+  };
+
   // Telling the agent's pointer from the developer's own mouse (they share one pointer):
   // - a hand sends a stream of moves, many per second, each a few pixels;
   // - an agent's hover is a single move with nothing just before it: either no movement at all, or one
@@ -268,7 +308,7 @@
   const acted = (who) => { actor = who; actedAt = performance.now(); };
   const near = (p, e, r) => p && Math.hypot(e.clientX - p.x, e.clientY - p.y) <= r;
   addEventListener('pointermove', (e) => {
-    if (!e.isTrusted) { return; }
+    if (gone() || !e.isTrusted) { return; }
     const now = performance.now();
     const lone = now - lastMoveAt > 120;
     lastMoveAt = now;
@@ -291,7 +331,7 @@
   // A click is the developer's own when it lands where their hand has been moving (a stream of moves, not
   // one lone hop, which is how a Playwright click arrives). Those are skipped unless "show my clicks" is on.
   addEventListener('pointerdown', (e) => {
-    if (!e.isTrusted) { return; }
+    if (gone() || !e.isTrusted) { return; }
     const mine = near(hand, e, 4) && hand.streak >= 3;
     acted(mine ? 'hand' : 'agent');
     if (mine && !showMine) { return; }
@@ -310,6 +350,7 @@
   // only within a few seconds of an agent action, not whenever the page fires such events itself. The key
   // and the value are never looked at.
   const typed = (e) => {
+    if (gone()) { return; }
     if (actor !== 'agent' && !showMine) { return; }
     if (!e.isTrusted && performance.now() - actedAt > 5000) { return; }
     const el = hit(e);
@@ -341,6 +382,7 @@
   // An agent action inside an iframe: the top page's outline is now stale, and the next step badge
   // belongs in the corner toast, not on it.
   addEventListener('message', (e) => {
+    if (gone()) { return; }
     if (e.data?.overTheShoulder === 'lit' && ownFrame(window, e.source, 0)) { end(); }
   });
 
@@ -361,6 +403,7 @@
   let shownStep = { step: '', lights: -1 };
   let saidAt = -Infinity;
   addEventListener(EVENT, (e) => {
+    if (gone()) { return; }
     // Cleared first, so an event that draws nothing never leaves the previous step's answer to be read.
     delete host.dataset.last;
     let detail = {};

@@ -4,6 +4,11 @@
 
 - CI: the Playwright tests run on every pull request and on pushes to `main` (GitHub Actions).
 - Issue templates (bug report, feature request) and a pull request template.
+- Positioning fixes (#7): outlines and badges land on their target when a page sets CSS `zoom` on its
+  root; an overlay left by an earlier copy of the script (after the extension is reloaded or updated) is
+  removed, and that old copy stops drawing; the overlay's own styles are `!important`, so page CSS cannot
+  hide it; a click inside a container too large to outline outlines the clicked element.
+- Needs Chrome 128 or later (was 121): the zoom fix relies on standardised CSS zoom.
 - The agent can check what was drawn (#6): the overlay keeps an in-memory log of this page's hovers,
   clicks, typing and steps, and who did them (role and label or visible text only, never what was typed or
   text inside a field or editable element; newest 200), answers each step event with what it drew
