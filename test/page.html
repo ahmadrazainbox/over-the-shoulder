@@ -68,6 +68,9 @@
     <input id="code" aria-labelledby="code-label code" value="prefilled value">
     <label>Comment <textarea id="comment">prefilled comment</textarea></label>
     <input id="qty1" aria-label="Qty" size="4"><input id="qty2" aria-label="Qty" size="4">
+    <!-- A code editor's shape: keys go to a hidden textarea, typed text is drawn into plain spans. -->
+    <div id="editor"><textarea aria-label="Editor input" style="position:absolute;opacity:0;width:1px;height:1px"></textarea><pre><span id="code-line">const apiKey = 'sk-typed-in-editor'</span></pre></div>
+    <div id="aria-box" role="textbox" title="typed into title">typed into an aria textbox</div>
   </section>
 
   <script>

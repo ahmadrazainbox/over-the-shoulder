@@ -330,9 +330,12 @@ test('typing is one entry per field, and the log keeps the newest 200 entries', 
       window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: i % 100 }) }));
     }
   });
+  const last = await ots(page, 'last');
   log = await drawnLog(page);
   expect(log).toHaveLength(200);
   expect(log[199].n - log[0].n).toBe(199);
+  // The newest are kept: the last entry is the last step sent.
+  expect(log[199].n).toBe(last.n);
 });
 
 test('text inside editable elements, fields and labels never becomes part of a name', async ({ page }) => {
@@ -357,6 +360,18 @@ test('text inside editable elements, fields and labels never becomes part of a n
   expect(on).toContain('textbox "Comment"');
   const text = JSON.stringify(log);
   for (const typed of ['typed', 'zzz', 'prefilled', 'more']) { expect(text).not.toContain(typed); }
+});
+
+test("a code editor's drawn lines and an ARIA text box give no text", async ({ page }) => {
+  await page.locator('#code-line').click();
+  await page.waitForTimeout(400);
+  await page.locator('#aria-box').click();
+  const log = await drawnLog(page);
+  const on = log.map((entry) => entry.on);
+  expect(on).toContain('span');
+  expect(on).toContain('textbox');
+  const text = JSON.stringify(log);
+  for (const typed of ['apiKey', 'sk-', 'typed']) { expect(text).not.toContain(typed); }
 });
 
 test('two fields with the same name, typed one after the other, are two entries', async ({ page }) => {

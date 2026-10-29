@@ -171,6 +171,9 @@
   const ROLES = { A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', LI: 'listitem', TD: 'cell',
     TH: 'columnheader', LABEL: 'label', SUMMARY: 'button', IFRAME: 'iframe', DIALOG: 'dialog' };
   const INPUTS = { checkbox: 'checkbox', radio: 'radio', button: 'button', submit: 'button', reset: 'button', range: 'slider' };
+  const NAMED_BY_TEXT = new Set(['link', 'button', 'label', 'heading', 'listitem', 'cell', 'columnheader',
+    'rowheader', 'option', 'tab', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'checkbox', 'radio', 'switch',
+    'treeitem']);
   const clip = (s) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   // The words of a node, skipping anything a person can type into (an editable element, a field, a select and
   // its options), so typed text never becomes part of a name.
@@ -184,7 +187,8 @@
     const tag = el.tagName;
     const role = el.getAttribute('role') || (tag === 'INPUT' ? INPUTS[el.type] || 'textbox' : ROLES[tag])
       || (/^H[1-6]$/.test(tag) ? 'heading' : tag.toLowerCase());
-    const field = editable(el);
+    // A text box without contenteditable (an ARIA widget) counts as a field too.
+    const field = editable(el) || /^(textbox|searchbox|spinbutton|combobox)$/.test(el.getAttribute('role') || '');
     const ids = (el.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean);
     const referred = ids.map((id) => el.getRootNode().getElementById?.(id)).filter((node) => node && node !== el);
     const name = el.getAttribute('aria-label')
@@ -195,7 +199,9 @@
       || el.getAttribute('alt') || el.getAttribute('placeholder')
       // Pages sometimes copy a field's value into its title, so a field's title is not read.
       || (field ? '' : el.getAttribute('title'))
-      || (field || tag === 'SELECT' ? '' : safeText(el));
+      // Visible text only for elements that are named by it. A plain div, span or pre can be where a code
+      // editor or terminal draws what was typed (its keys go to a hidden field), so those get no text.
+      || (field || !NAMED_BY_TEXT.has(role) ? '' : safeText(el));
     return clip(name) ? `${role} "${clip(name)}"` : role;
   };
   const log = [];
@@ -204,7 +210,11 @@
   const record = (entry, el = null) => {
     const prev = log[log.length - 1];
     // Typing fires on every key: one entry per field (the same element, not just the same name).
-    if (entry.action === 'type' && prev?.action === 'type' && typedIn === el) { prev.t = Math.round(performance.now()); return prev; }
+    if (entry.action === 'type' && prev?.action === 'type' && typedIn === el) {
+      prev.t = Math.round(performance.now());
+      prev.trusted = prev.trusted || entry.trusted;
+      return prev;
+    }
     typedIn = entry.action === 'type' ? el : null;
     const full = { n: ++logged, t: Math.round(performance.now()), ...entry };
     log.push(full);

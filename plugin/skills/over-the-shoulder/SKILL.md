@@ -30,10 +30,11 @@ This skill is written for extension version 0.1.1.
    or browser page) and ask before going on without it. Never say the overlay was visible without having
    seen it.
 4. Read the extension's version right after that step 0 event:
-   `document.querySelector('[data-over-the-shoulder]')?.dataset.version`. Nothing there means the
-   extension is not running on this page, or is a version older than the one this skill is written for.
-   A different version: tell the developer which two you see. After they reload the extension, the page
-   must be reloaded too, or it keeps the old one.
+   `document.querySelector('[data-over-the-shoulder]')?.dataset.version`. A different version: tell the
+   developer which two you see. After they reload the extension, the page must be reloaded too, or it
+   keeps the old one. Nothing there, although the toast showed: the extension is older than 0.2.0 and
+   keeps no log. Say so, and go on without it: steps get no `data-last`, each Pass cites a screenshot only,
+   and the report says "Overlay log: not available (extension older than 0.2.0)".
 
 ## 2. Every step
 
