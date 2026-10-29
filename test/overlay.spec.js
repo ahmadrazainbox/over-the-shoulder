@@ -173,6 +173,99 @@ test('with nothing lit, the step shows as a toast', async ({ page }) => {
   expect(toast?.text).toBe('7Checking the inner frame');
 });
 
+// A short hop between neighbouring fields is not lit as a hover, so the field of the step before is
+// still lit when the next step arrives.
+const hopToNeighbour = async (page) => {
+  await page.locator('#pair').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await agentHover(page, '#first');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await send(page, { step: 1 });
+  const first = await centre(page, '#first');
+  const last = await centre(page, '#last');
+  expect(Math.hypot(last.x - first.x, last.y - first.y)).toBeLessThanOrEqual(80);
+  // An agent pauses between actions; a move straight after the hover would be taken as the hand's.
+  await page.waitForTimeout(400);
+  await page.mouse.move(last.x, last.y);
+  await page.waitForTimeout(200);
+  await expectSpotOn(page, '#first');
+  return last;
+};
+
+test('a new step with nothing lit since the last one goes to the toast, not on the old element', async ({ page }) => {
+  await hopToNeighbour(page);
+  await send(page, { step: 2 });
+  const state = await overlay(page);
+  expect(state.spot).toBeNull();
+  expect(state.badge).toBeNull();
+  expect(state.toast?.text).toBe('2');
+});
+
+test('a step that names its target with at is drawn on that element', async ({ page }) => {
+  const last = await hopToNeighbour(page);
+  await send(page, { step: 2, at: last });
+  await expectSpotOn(page, '#last');
+  expect((await overlay(page)).badge?.text).toBe('2');
+});
+
+test('a step that names its target with a selector is drawn on that element', async ({ page }) => {
+  await agentHover(page, '#far');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await send(page, { step: 3, selector: '#save', label: 'This one' });
+  await expectSpotOn(page, '#save');
+  const state = await overlay(page);
+  expect(state.badge?.text).toBe('3');
+  expect(state.label?.text).toBe('This one');
+});
+
+test('a named target that is not on the page clears the outline and shows the toast', async ({ page }) => {
+  await agentHover(page, '#save');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await send(page, { step: 4, selector: '#missing' });
+  let state = await overlay(page);
+  expect(state.spot).toBeNull();
+  expect(state.toast?.text).toBe('4');
+  await send(page, { step: 5, selector: 'not a [valid selector' });
+  state = await overlay(page);
+  expect(state.spot).toBeNull();
+  expect(state.toast?.text).toBe('5');
+});
+
+test('the same step sent again (a label added) keeps its target', async ({ page }) => {
+  await agentHover(page, '#save');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await send(page, { step: 6 });
+  await send(page, { step: 6, label: 'Total is wrong' });
+  await send(page, { label: 'Still the same step' });
+  await expectSpotOn(page, '#save');
+  const state = await overlay(page);
+  expect(state.badge?.text).toBe('6');
+  expect(state.label?.text).toBe('Still the same step');
+});
+
+test('a step after a click that opens a modal dialog is raised above the dialog', async ({ page }) => {
+  await page.locator('#open-dialog').scrollIntoViewIfNeeded();
+  await page.click('#open-dialog');
+  await expect(page.locator('#dialog')).toBeVisible();
+  // The browser's top layer stacks in the order things are shown: the overlay is above the dialog when it
+  // is shown again after the dialog opened.
+  // Toggle events arrive a moment late, so the ones from the click's own raise are let through first.
+  await page.evaluate(() => {
+    document.querySelector('[data-over-the-shoulder]').addEventListener('toggle', (e) => {
+      if (e.newState === 'open') { window.raisedAfterDialog = true; }
+    });
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { window.raisedAfterDialog = false; });
+  await send(page, { step: 7 });
+  await expect.poll(() => page.evaluate(() => window.raisedAfterDialog)).toBe(true);
+  await page.evaluate(() => { window.raisedAfterDialog = false; });
+  await send(page, { step: 8, selector: '#dialog-ok' });
+  await expect.poll(() => page.evaluate(() => window.raisedAfterDialog)).toBe(true);
+  await expectSpotOn(page, '#dialog-ok');
+  expect((await overlay(page)).badge?.text).toBe('8');
+});
+
 test('back and forward, and Inertia page visits, clear the spotlight too', async ({ page }) => {
   await page.click('#nav');
   await page.waitForTimeout(1000);

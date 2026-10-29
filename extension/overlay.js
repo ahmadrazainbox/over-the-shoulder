@@ -12,7 +12,8 @@
 //
 // Agents add a step number, a label for a finding, or a line to speak, by running this in the page
 // (detail is a JSON string because the page and this script run in separate JavaScript worlds):
-//   window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 4, label: 'Total is wrong', say: 'Watch the total.' }) }))
+//   window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 4, label: 'Total is wrong', say: 'Watch the total.', at: { x: 640, y: 320 } }) }))
+// `at` (where the agent just hovered or clicked) or `selector` names the step's own target.
 // Only the top window listens, so a target inside an iframe gets no badge; the step shows as a toast.
 (() => {
   if (window.__overTheShoulder) { return; }
@@ -80,7 +81,8 @@
   const hide = (el) => { el.style.display = 'none'; };
 
   // Shown as a manual popover where it can be, so it sits in the browser's top layer, above a native
-  // <dialog> or popover; z-index alone cannot rise above those. Raised again on each new step only.
+  // <dialog> or popover; z-index alone cannot rise above those. Raised again on each new target and on
+  // every step event.
   if ('popover' in host) { host.popover = 'manual'; }
   const raise = () => {
     if (!host.isConnected) { document.documentElement.append(host); }
@@ -113,6 +115,8 @@
   };
 
   let target = null;
+  // How many times something has been lit, so a step can tell whether anything was lit since the last one.
+  let lights = 0;
   let at = { x: 0, y: 0 };
   let follow = 0;
   let last = '';
@@ -175,6 +179,7 @@
     clearTimeout(endTimer);
     if (!quiet) { liftTimer = setTimeout(() => spot.classList.add('lifted'), DIM_MS); }
     endTimer = setTimeout(end, STAY_MS);
+    lights++;
     if (!isTop) { try { window.top.postMessage({ overTheShoulder: 'lit' }, '*'); } catch { /* detached */ } }
   };
 
@@ -279,6 +284,19 @@
 
   // Step numbers, finding labels and spoken lines from the agent. With nothing lit (the target is in an
   // iframe, or the agent has not hovered), the step and label show as a toast in the corner instead.
+  // A step can name its own target, so its badge never lands on the element of the step before (a short
+  // hover hop between neighbouring fields is not lit): `selector` (CSS, first match in the top page) or
+  // `at` ({ x, y } in the viewport's CSS pixels, where the agent just hovered or clicked).
+  const named = (detail) => {
+    if (typeof detail.selector === 'string' && detail.selector) {
+      try { return document.querySelector(detail.selector.slice(0, 300)); } catch { return null; }
+    }
+    const x = Number(detail.at?.x);
+    const y = Number(detail.at?.y);
+    return Number.isFinite(x) && Number.isFinite(y) ? deepAt(x, y) : null;
+  };
+  // The step last shown on a target, and the light count at the time.
+  let shownStep = { step: '', lights: -1 };
   let saidAt = -Infinity;
   addEventListener(EVENT, (e) => {
     let detail = {};
@@ -290,17 +308,34 @@
       try { chrome.runtime.sendMessage({ type: 'say', text: String(detail.say).slice(0, 300) }); } catch { /* reloaded */ }
     }
     if (!step && !text) { return; }
+    // Every step comes to the front, above a dialog or popover the agent's last click may have opened.
+    raise();
+    if (detail.selector !== undefined || detail.at !== undefined) {
+      const chosen = pick(named(detail));
+      if (chosen) {
+        const r = chosen.getBoundingClientRect();
+        light(chosen, r.left + r.width / 2, r.top + r.height / 2, { quiet: true });
+      } else {
+        end();
+      }
+    } else if (target && step && step !== shownStep.step && lights === shownStep.lights) {
+      // A new step with nothing lit since the last one: the lit element belongs to that step.
+      end();
+    }
     if (!target) {
       toast.replaceChildren();
       if (step) { toast.append(Object.assign(document.createElement('b'), { textContent: step })); }
       if (text) { toast.append(document.createTextNode(text)); }
-      raise();
       show(toast);
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(toast), text ? 8000 : 4000);
       return;
     }
-    if (step) { badge.textContent = step; show(badge); }
+    if (step) {
+      badge.textContent = step;
+      show(badge);
+      shownStep = { step, lights };
+    }
     // A finding stays beside its target until the next element is lit, so it can be read.
     if (text) {
       label.textContent = text;
