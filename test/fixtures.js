@@ -21,7 +21,7 @@ export const test = base.extend({
   server: [async ({}, use) => {
     const server = createServer(async (req, res) => {
       const name = path.basename(new URL(req.url, 'http://x').pathname) || 'page.html';
-      const file = ['page.html', 'frame.html'].includes(name) ? name : 'page.html';
+      const file = ['page.html', 'frame.html', 'stale.html'].includes(name) ? name : 'page.html';
       res.setHeader('content-type', 'text/html');
       res.end(await readFile(path.join(here, file)));
     });

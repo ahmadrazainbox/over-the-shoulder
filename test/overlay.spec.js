@@ -404,6 +404,65 @@ test("the developer's own click is logged as theirs when shown", async ({ page, 
   expect(log.find((entry) => entry.action === 'click')).toMatchObject({ on: 'button "Save"', by: 'hand' });
 });
 
+for (const zoom of ['1.5', '0.8']) {
+  test(`outlines and badges land on their target when the page sets CSS zoom ${zoom}`, async ({ page }) => {
+    await page.evaluate((z) => { document.documentElement.style.zoom = z; }, zoom);
+    await page.waitForTimeout(300);
+    await agentHover(page, '#save');
+    await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+    await expectSpotOn(page, '#save');
+    await send(page, { step: 1 });
+    const target = await page.locator('#save').evaluate((el) => el.getBoundingClientRect().toJSON());
+    const { badge } = await overlay(page);
+    expect(Math.abs(badge.x - (target.right + 2))).toBeLessThan(3);
+  });
+}
+
+test('an outline follows when the page changes its zoom while it is lit', async ({ page }) => {
+  await agentHover(page, '#save');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await page.evaluate(() => { document.documentElement.style.zoom = '1.5'; });
+  await page.waitForTimeout(300);
+  await expectSpotOn(page, '#save');
+});
+
+test('an overlay left behind by a reloaded extension is removed, so there is only one', async ({ page, server }) => {
+  await page.goto(`${server}/stale.html`);
+  await page.waitForTimeout(1100);
+  await send(page, { step: 1 });
+  const hosts = await page.evaluate(() => [...document.querySelectorAll('[data-over-the-shoulder]')].map((el) => el.id));
+  expect(hosts).toEqual(['']);
+});
+
+test('after the extension is reloaded, the old overlay removes itself instead of drawing', async ({ page, worker }) => {
+  await send(page, { step: 1 });
+  expect(await page.locator('[data-over-the-shoulder]').count()).toBe(1);
+  await worker.evaluate(() => chrome.runtime.reload()).catch(() => { /* the worker goes away */ });
+  // The old copy notices on its next event; sent again until it has, however long the reload takes.
+  await expect.poll(async () => {
+    await send(page, { step: 2 });
+    return page.locator('[data-over-the-shoulder]').count();
+  }, { timeout: 10000 }).toBe(0);
+});
+
+test("the page's own CSS cannot hide the overlay", async ({ page }) => {
+  await page.addStyleTag({ content: 'div { display: none !important; visibility: hidden !important; opacity: 0 !important; }' });
+  await agentHover(page, '#save');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  const style = await page.evaluate(() => {
+    const s = getComputedStyle(document.querySelector('[data-over-the-shoulder]'));
+    return { display: s.display, visibility: s.visibility, opacity: s.opacity };
+  });
+  expect(style).toEqual({ display: 'block', visibility: 'visible', opacity: '1' });
+});
+
+test('a click inside a container too large to outline outlines the clicked element', async ({ page }) => {
+  await page.locator('#in-big').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await page.locator('#in-big').click();
+  await expectSpotOn(page, '#in-big');
+});
+
 test('back and forward, and Inertia page visits, clear the spotlight too', async ({ page }) => {
   await page.click('#nav');
   await page.waitForTimeout(1000);
