@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- CI: the Playwright tests run on every pull request and on pushes to `main` (GitHub Actions).
+- Issue templates (bug report, feature request) and a pull request template.
+
 ## 0.1.1 (2026-10-29)
 
 - New icon: a white pointer acting on a red-outlined target, the overlay itself. Replaces the red ring,
