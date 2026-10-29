@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect, overlay, send } from './fixtures.js';
 
 // The spot is drawn 6px outside its target on every side.
@@ -264,6 +265,128 @@ test('a step after a click that opens a modal dialog is raised above the dialog'
   await expect.poll(() => page.evaluate(() => window.raisedAfterDialog)).toBe(true);
   await expectSpotOn(page, '#dialog-ok');
   expect((await overlay(page)).badge?.text).toBe('8');
+});
+
+// What the overlay drew, as the agent reads it back from the overlay's own element.
+const ots = (page, key) => page.evaluate((k) => {
+  const value = document.querySelector('[data-over-the-shoulder]')?.dataset[k];
+  return value === undefined ? null : k === 'version' ? value : JSON.parse(value);
+}, key);
+const drawnLog = async (page) => { await send(page, { log: true }); return ots(page, 'log'); };
+
+test('the log names what was hovered, clicked and typed into, never what was typed', async ({ page }) => {
+  await agentHover(page, '#save');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await page.waitForTimeout(400);
+  await page.click('#save');
+  await page.waitForTimeout(400);
+  await agentHover(page, '#name');
+  await page.locator('#name').fill('Ada secret 42');
+  await page.waitForTimeout(400);
+  await agentHover(page, '#status');
+  await page.locator('#status').selectOption('Closed');
+  const log = await drawnLog(page);
+  const seen = log.map(({ action, on, trusted }) => ({ action, on, trusted }));
+  expect(seen).toContainEqual({ action: 'hover', on: 'button "Save"', trusted: true });
+  expect(seen).toContainEqual({ action: 'click', on: 'button "Save"', trusted: true });
+  expect(seen).toContainEqual({ action: 'type', on: 'textbox "Name"', trusted: true });
+  // A value set by a script and announced with change is untrusted, and the select's options are not read.
+  expect(seen).toContainEqual({ action: 'type', on: 'combobox "Status"', trusted: false });
+  const text = JSON.stringify(log);
+  expect(text).not.toContain('Ada');
+  expect(text).not.toContain('secret');
+  expect(text).not.toContain('Closed');
+  expect(log.every((entry, i) => i === 0 || entry.n > log[i - 1].n)).toBe(true);
+});
+
+test('each step answers with what it drew: the element, or the toast', async ({ page }) => {
+  await agentHover(page, '#save');
+  await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
+  await send(page, { step: 1, label: 'Saved' });
+  expect(await ots(page, 'last')).toMatchObject({ action: 'step', step: '1', on: 'button "Save"', label: true });
+  await send(page, { step: 2, selector: '#missing' });
+  expect(await ots(page, 'last')).toMatchObject({ action: 'step', step: '2', on: 'toast', label: false });
+  const last = await ots(page, 'last');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action === 'step').map((entry) => entry.on)).toEqual(['button "Save"', 'toast']);
+  expect(log.find((entry) => entry.n === last.n)).toMatchObject({ step: '2', on: 'toast' });
+});
+
+test('the extension version is readable after the first step event', async ({ page }) => {
+  const { version } = JSON.parse(await readFile(new URL('../extension/manifest.json', import.meta.url), 'utf8'));
+  await send(page, { step: 0, label: 'Overlay check' });
+  expect(await ots(page, 'version')).toBe(version);
+});
+
+test('typing is one entry per field, and the log keeps the newest 200 entries', async ({ page }) => {
+  await page.click('#notes');
+  await page.keyboard.type('hello');
+  let log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action === 'type')).toHaveLength(1);
+  expect(log.find((entry) => entry.action === 'type').on).toBe('textbox "Notes"');
+  expect(JSON.stringify(log)).not.toContain('hello');
+  await page.evaluate(() => {
+    for (let i = 0; i < 250; i++) {
+      window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: i % 100 }) }));
+    }
+  });
+  log = await drawnLog(page);
+  expect(log).toHaveLength(200);
+  expect(log[199].n - log[0].n).toBe(199);
+});
+
+test('text inside editable elements, fields and labels never becomes part of a name', async ({ page }) => {
+  // Clicked on the words "Row" and "Cell", outside the editable parts, so the row and cell are lit.
+  await page.locator('#row').click({ position: { x: 5, y: 8 } });
+  await page.waitForTimeout(400);
+  await page.locator('#cell').click({ position: { x: 5, y: 8 } });
+  await page.waitForTimeout(400);
+  await page.locator('#edit').click();
+  await page.keyboard.type('zzz');
+  await page.waitForTimeout(400);
+  await page.locator('#code').click();
+  await page.keyboard.type('9');
+  await page.waitForTimeout(400);
+  await page.locator('#comment').click();
+  await page.keyboard.type('more');
+  const log = await drawnLog(page);
+  const on = log.map((entry) => entry.on);
+  expect(on).toContain('listitem "Row"');
+  expect(on).toContain('cell "Cell"');
+  expect(on).toContain('textbox "Code"');
+  expect(on).toContain('textbox "Comment"');
+  const text = JSON.stringify(log);
+  for (const typed of ['typed', 'zzz', 'prefilled', 'more']) { expect(text).not.toContain(typed); }
+});
+
+test('two fields with the same name, typed one after the other, are two entries', async ({ page }) => {
+  await page.locator('#qty1').click();
+  await page.keyboard.type('1');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('2');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action === 'type' && entry.on === 'textbox "Qty"')).toHaveLength(2);
+});
+
+test('a log request includes the step sent with it, and an event that draws nothing leaves no answer', async ({ page }) => {
+  await send(page, { step: 9, log: true });
+  const log = await ots(page, 'log');
+  expect(log[log.length - 1]).toMatchObject({ action: 'step', step: '9', on: 'toast' });
+  expect(await ots(page, 'last')).toMatchObject({ step: '9' });
+  await send(page, { say: 'Only a spoken line' });
+  expect(await ots(page, 'last')).toBeNull();
+});
+
+test("the developer's own click is logged as theirs when shown", async ({ page, worker }) => {
+  await worker.evaluate(() => chrome.storage.local.set({ showMine: true }));
+  await page.waitForTimeout(200);
+  const { x, y } = await centre(page, '#save');
+  await page.mouse.move(x - 40, y, { steps: 10 });
+  await page.mouse.move(x, y, { steps: 10 });
+  await page.mouse.down();
+  await page.mouse.up();
+  const log = await drawnLog(page);
+  expect(log.find((entry) => entry.action === 'click')).toMatchObject({ on: 'button "Save"', by: 'hand' });
 });
 
 test('back and forward, and Inertia page visits, clear the spotlight too', async ({ page }) => {

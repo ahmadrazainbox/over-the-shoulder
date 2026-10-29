@@ -83,7 +83,8 @@ did; the agent's chat and its final report are the record. Enable the extension 
 ## Privacy
 
 Draws only. It never reads field values or keys, stores nothing but your settings, and sends nothing
-anywhere. See [PRIVACY.md](PRIVACY.md).
+anywhere. While a page is open it keeps a short list of what it drew there (element role and label or
+visible text, never what was typed), so the agent can check its report. See [PRIVACY.md](PRIVACY.md).
 
 ## Develop
 

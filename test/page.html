@@ -60,6 +60,16 @@
     <dialog id="dialog"><p>A modal dialog</p><button id="dialog-ok">OK</button></dialog>
   </section>
 
+  <section>
+    <h2>Text a person typed (never logged)</h2>
+    <ul><li id="row">Row <span id="edit" contenteditable="true">typed in a row</span></li></ul>
+    <table><tr><td id="cell">Cell <div contenteditable="true">typed in a cell</div></td></tr></table>
+    <span id="code-label">Code</span>
+    <input id="code" aria-labelledby="code-label code" value="prefilled value">
+    <label>Comment <textarea id="comment">prefilled comment</textarea></label>
+    <input id="qty1" aria-label="Qty" size="4"><input id="qty2" aria-label="Qty" size="4">
+  </section>
+
   <script>
     customElements.define('shadow-card', class extends HTMLElement {
       connectedCallback() {

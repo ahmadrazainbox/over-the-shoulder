@@ -4,6 +4,12 @@
 
 - CI: the Playwright tests run on every pull request and on pushes to `main` (GitHub Actions).
 - Issue templates (bug report, feature request) and a pull request template.
+- The agent can check what was drawn (#6): the overlay keeps an in-memory log of this page's hovers,
+  clicks, typing and steps, and who did them (role and label or visible text only, never what was typed or
+  text inside a field or editable element; newest 200), answers each step event with what it drew
+  (`data-last`), writes the log on request (`log: true`, `data-log`) and its version (`data-version`). The
+  skill checks the version, reads back each step, and cites a log entry and a screenshot for every Pass in
+  the report; anything without one goes under Not checked.
 - Step badges land on the right element (#5): a step event can name its own target with `selector` (or
   `at: { x, y }` in the page's CSS pixels); a new step with nothing lit since the last one shows in the
   corner toast instead of on the previous step's element; a target that is not found also goes to the
