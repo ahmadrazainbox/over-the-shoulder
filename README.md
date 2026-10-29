@@ -17,7 +17,7 @@ It does not drive the browser itself. It sits on top of whatever your agent alre
 *Screenshot from a demo invoice app, with sample data: the extension outlines the changed total, numbers the
 step and labels what changed and where in the code.*
 
-> Status: 0.1.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
+> Status: 0.2.0, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
 
 ## Install
 
@@ -77,7 +77,13 @@ window.dispatchEvent(new CustomEvent('over-the-shoulder', {
 ```
 
 `detail` must be a JSON string. All fields are optional: `step` (badge), `label` (finding, up to 200
-characters), `say` (spoken if voice is on, up to 300 characters).
+characters), `say` (spoken if voice is on, up to 300 characters), `selector` (the step's own target, a CSS
+selector in the top page; not found sends the step to the corner toast), `at` (`{ x, y }` in the page's CSS
+pixels, instead of `selector`) and `log` (`true` writes the page's log of what was drawn).
+
+The overlay answers on its host element, `document.querySelector('[data-over-the-shoulder]')`:
+`dataset.last` is what the latest step drew (`on`: the element, or `toast`), `dataset.log` the log as JSON
+(after `log: true`), `dataset.version` the extension's version. The skill reads these to check its report.
 
 Any script on a page where the overlay runs can send this event, not only your agent, and could also draw
 look-alike marks of its own. So treat the overlay as a guide to follow the agent, not as proof of what it
@@ -105,9 +111,9 @@ Chrome's input layer ([test/traces](test/traces/README.md)).
 
 ## Releases
 
-Versions follow [semantic versioning](https://semver.org): 0.1 Claude, 0.2 adds Codex, 0.3 adds Google
-Antigravity, 1.0 is the first Chrome Web Store release. Each release is a `v<version>` tag with the
-extension zip attached; see [CHANGELOG.md](CHANGELOG.md).
+Versions follow [semantic versioning](https://semver.org): 0.1 Claude, 0.2 stable on Claude, 0.3 adds
+Codex, 0.4 adds Google Antigravity, 1.0 is the first Chrome Web Store release. Each release is a
+`v<version>` tag with the extension zip attached; see [CHANGELOG.md](CHANGELOG.md).
 
 ## Author
 

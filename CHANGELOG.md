@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-29)
 
 - The agent's clicks show while the developer moves their own mouse (#8): a press within 15 ms of a move
   that jumped more than 200 px to it is the agent's, so the click and the typing after it are drawn (before,
