@@ -17,6 +17,8 @@ test('every file carries the same version, and the changelog starts with it', as
   for (const [file, version] of Object.entries(versions)) {
     expect(version, file).toBe(pkg.version);
   }
+  const skill = await readFile(new URL('../plugin/skills/over-the-shoulder/SKILL.md', import.meta.url), 'utf8');
+  expect(skill.match(/written for extension version (\S+?)\.?$/m)?.[1], 'SKILL.md extension version').toBe(pkg.version);
   const changelog = await readFile(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
   // Changes waiting for the next release sit under "## Unreleased" above it.
   expect(changelog.match(/^## (?!Unreleased)(\S+)/m)?.[1], 'latest released CHANGELOG entry').toBe(pkg.version);

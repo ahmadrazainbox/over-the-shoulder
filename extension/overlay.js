@@ -8,7 +8,9 @@
 // - a click leaves a ripple and an outline;
 // - typing (key presses, or text inserted in one go) outlines the field.
 //
-// It draws only. It reads no field values, never looks at which key was pressed, and stores nothing.
+// It draws only. It reads no field values, never looks at which key was pressed, and stores nothing; it
+// keeps a short in-memory list of what it drew (element role and visible name), which the agent can read
+// back to check its report.
 //
 // Agents add a step number, a label for a finding, or a line to speak, by running this in the page
 // (detail is a JSON string because the page and this script run in separate JavaScript worlds):
@@ -161,10 +163,70 @@
     spot.classList.remove('lifted', 'quiet');
   }
 
+  // What was drawn, so the agent can check its report against it (the step event's `log`). Each entry names
+  // the element by role and visible name only; a field's value, a key, or an editable element's text is
+  // never read. Kept in memory for this page only, newest 200.
+  const VERSION = (() => { try { return chrome.runtime.getManifest().version; } catch { return ''; } })();
+  host.dataset.version = VERSION;
+  const ROLES = { A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', LI: 'listitem', TD: 'cell',
+    TH: 'columnheader', LABEL: 'label', SUMMARY: 'button', IFRAME: 'iframe', DIALOG: 'dialog' };
+  const INPUTS = { checkbox: 'checkbox', radio: 'radio', button: 'button', submit: 'button', reset: 'button', range: 'slider' };
+  const NAMED_BY_TEXT = new Set(['link', 'button', 'label', 'heading', 'listitem', 'cell', 'columnheader',
+    'rowheader', 'option', 'tab', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'checkbox', 'radio', 'switch',
+    'treeitem']);
+  const clip = (s) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  // The words of a node, skipping anything a person can type into (an editable element, a field, a select and
+  // its options), so typed text never becomes part of a name.
+  const safeText = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) { return node.textContent; }
+    if (!(node instanceof Element) || editable(node) || node.matches('select,option,input,textarea,script,style')) { return ''; }
+    return [...node.childNodes].map(safeText).join(' ');
+  };
+  const describe = (el) => {
+    if (!(el instanceof Element)) { return ''; }
+    const tag = el.tagName;
+    const role = el.getAttribute('role') || (tag === 'INPUT' ? INPUTS[el.type] || 'textbox' : ROLES[tag])
+      || (/^H[1-6]$/.test(tag) ? 'heading' : tag.toLowerCase());
+    // A text box without contenteditable (an ARIA widget) counts as a field too.
+    const field = editable(el) || /^(textbox|searchbox|spinbutton|combobox)$/.test(el.getAttribute('role') || '');
+    const ids = (el.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean);
+    const referred = ids.map((id) => el.getRootNode().getElementById?.(id)).filter((node) => node && node !== el);
+    const name = el.getAttribute('aria-label')
+      || referred.map(safeText).join(' ')
+      || (el.labels?.[0] ? safeText(el.labels[0]) : '')
+      // A button input's caption is set by the page, not typed.
+      || (tag === 'INPUT' && INPUTS[el.type] === 'button' ? el.value : '')
+      || el.getAttribute('alt') || el.getAttribute('placeholder')
+      // Pages sometimes copy a field's value into its title, so a field's title is not read.
+      || (field ? '' : el.getAttribute('title'))
+      // Visible text only for elements that are named by it. A plain div, span or pre can be where a code
+      // editor or terminal draws what was typed (its keys go to a hidden field), so those get no text.
+      || (field || !NAMED_BY_TEXT.has(role) ? '' : safeText(el));
+    return clip(name) ? `${role} "${clip(name)}"` : role;
+  };
+  const log = [];
+  let logged = 0;
+  let typedIn = null;
+  const record = (entry, el = null) => {
+    const prev = log[log.length - 1];
+    // Typing fires on every key: one entry per field (the same element, not just the same name).
+    if (entry.action === 'type' && prev?.action === 'type' && typedIn === el) {
+      prev.t = Math.round(performance.now());
+      prev.trusted = prev.trusted || entry.trusted;
+      return prev;
+    }
+    typedIn = entry.action === 'type' ? el : null;
+    const full = { n: ++logged, t: Math.round(performance.now()), ...entry };
+    log.push(full);
+    if (log.length > 200) { log.shift(); }
+    return full;
+  };
+
   // quiet: a click or typing. An outline only, no dim and no pulse; the step number stays.
-  const light = (el, x, y, { quiet = false } = {}) => {
+  const light = (el, x, y, { quiet = false, action = '', trusted = true, by = 'agent' } = {}) => {
     const chosen = pick(el);
     if (!chosen) { return; }
+    if (action) { record({ action, on: describe(chosen), trusted, by }, chosen); }
     const same = chosen === target;
     if (!same) { raise(); hide(badge); hide(label); }
     target = chosen;
@@ -223,7 +285,7 @@
     agent = { x: e.clientX, y: e.clientY };
     acted('agent');
     litByMoveAt = now;
-    light(hit(e), e.clientX, e.clientY);
+    light(hit(e), e.clientX, e.clientY, { action: 'hover' });
   }, true);
 
   // A click is the developer's own when it lands where their hand has been moving (a stream of moves, not
@@ -238,7 +300,7 @@
     Object.assign(ripple.style, { left: `${e.clientX}px`, top: `${e.clientY}px` });
     setTimeout(() => ripple.remove(), 1000);
     raise();
-    light(hit(e), e.clientX, e.clientY, { quiet: true });
+    light(hit(e), e.clientX, e.clientY, { quiet: true, action: 'click', by: mine ? 'hand' : 'agent' });
   }, true);
 
   // Typing: an outline on the field being typed into, after the agent's own last action (the developer's
@@ -253,7 +315,7 @@
     const el = hit(e);
     if (!editable(el)) { return; }
     const r = el.getBoundingClientRect();
-    light(el, r.left + r.width / 2, r.top + r.height / 2, { quiet: true });
+    light(el, r.left + r.width / 2, r.top + r.height / 2, { quiet: true, action: 'type', trusted: e.isTrusted, by: actor === 'agent' ? 'agent' : 'hand' });
   };
   addEventListener('keydown', (e) => { if (e.isTrusted) { typed(e); } }, true);
   addEventListener('input', typed, true);
@@ -299,6 +361,8 @@
   let shownStep = { step: '', lights: -1 };
   let saidAt = -Infinity;
   addEventListener(EVENT, (e) => {
+    // Cleared first, so an event that draws nothing never leaves the previous step's answer to be read.
+    delete host.dataset.last;
     let detail = {};
     try { detail = JSON.parse(typeof e.detail === 'string' ? e.detail : '{}') || {}; } catch { return; }
     const step = detail.step === undefined || detail.step === null ? '' : String(detail.step).slice(0, 4);
@@ -307,7 +371,17 @@
       saidAt = performance.now();
       try { chrome.runtime.sendMessage({ type: 'say', text: String(detail.say).slice(0, 300) }); } catch { /* reloaded */ }
     }
-    if (!step && !text) { return; }
+    // The answer is written on the overlay's own element, where the agent reads it after sending:
+    // `data-last` (what this step drew), `data-log` (every entry, on request), `data-version`.
+    // Written once this event's own step is recorded, so the log includes it.
+    const answer = (entry) => {
+      if (entry) { host.dataset.last = JSON.stringify(entry); }
+      if (detail.log) {
+        if (!host.isConnected) { document.documentElement.append(host); }
+        host.dataset.log = JSON.stringify(log);
+      }
+    };
+    if (!step && !text) { answer(null); return; }
     // Every step comes to the front, above a dialog or popover the agent's last click may have opened.
     raise();
     if (detail.selector !== undefined || detail.at !== undefined) {
@@ -329,6 +403,7 @@
       show(toast);
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(toast), text ? 8000 : 4000);
+      answer(record({ action: 'step', step, on: 'toast', label: Boolean(text) }));
       return;
     }
     if (step) {
@@ -343,5 +418,6 @@
     }
     last = '';
     draw();
+    answer(record({ action: 'step', step, on: describe(target), label: Boolean(text) }));
   });
 })();

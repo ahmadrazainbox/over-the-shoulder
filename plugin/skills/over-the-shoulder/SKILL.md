@@ -12,6 +12,8 @@ The Over the Shoulder Chrome extension draws from your real input events: a hove
 click leaves a ripple, typing outlines the field. You add step numbers, finding labels and spoken lines
 through one page event. Tool names for each browser agent are in `references/tools.md`.
 
+This skill is written for extension version 0.1.1.
+
 ## 1. Before the first step
 
 1. Name the mode (below) and list the points you will show, numbered, each with the page and the user
@@ -27,6 +29,12 @@ through one page event. Tool names for each browser agent are in `references/too
    If the toast does not appear either, say so plainly (extension not installed, site not enabled, a PDF
    or browser page) and ask before going on without it. Never say the overlay was visible without having
    seen it.
+4. Read the extension's version right after that step 0 event:
+   `document.querySelector('[data-over-the-shoulder]')?.dataset.version`. A different version: tell the
+   developer which two you see. After they reload the extension, the page must be reloaded too, or it
+   keeps the old one. Nothing there, although the toast showed: the extension is older than 0.2.0 and
+   keeps no log. Say so, and go on without it: steps get no `data-last`, each Pass cites a screenshot only,
+   and the report says "Overlay log: not available (extension older than 0.2.0)".
 
 ## 2. Every step
 
@@ -41,6 +49,12 @@ through one page event. Tool names for each browser agent are in `references/too
   from screenshot pixels, so they do not match the page's own (see `references/tools.md`). Without a
   `selector`, a step after a short hover hop could land on the previous step's element; the overlay then
   shows it in the corner toast rather than guess.
+- **Read back** what the step drew, in the same JavaScript call that sends it:
+  `JSON.parse(document.querySelector('[data-over-the-shoulder]').dataset.last || 'null')` gives the
+  entry number `n`, the `step` and `on` (the element, such as `button "Save"`, or `toast`). Check that
+  `step` is the one you sent; nothing there means the event drew nothing. If `on` is not the element you
+  meant, say so before acting. Keep each answer: the numbers start again at 1 after a page load, so cite
+  an entry as page and number ("/invoices #4").
 - **Pause** 1 to 2 seconds so the developer sees the spotlight (the wait action in `references/tools.md`).
 - **Act** on the same target with the browser's own input: click or type on the same ref or coordinates.
   Never click or type through page JavaScript; the overlay only sees real input, and so should the test.
@@ -55,7 +69,9 @@ the target until the next one), `say` (up to 300 characters, spoken only if the 
 on in the popup), `selector` (the step's own target in the top page; one that is not found sends the step
 to the toast; `at: { x, y }` in the page's CSS pixels also works, for tools that use those). With nothing
 lit, the step and label show as a toast in the corner. A new step with nothing lit since the last one also
-goes to the toast; the same step sent again keeps its target.
+goes to the toast; the same step sent again keeps its target. `log: true` writes every entry the overlay
+recorded on this page (hovers, clicks, typing, steps; the newest 200) to `dataset.log` as JSON. Entries
+name elements by role and visible name only, never what was typed.
 
 Use `label` only for findings (a wrong figure, a confusing word), not to describe every step; the chat
 already does that.
@@ -118,6 +134,10 @@ Always in this shape, in plain words:
 - **Code behind it:** the files and `file:line` each visible difference comes from.
 - **Findings:** each with severity, page, user, and whether it was checked in the code.
 - **What changed:** files and commits, or "nothing changed".
-- **How it was checked:** which steps ran, on which host, as which user.
-- **Overlay:** seen throughout, or which steps went without it and why.
+- **How it was checked:** which steps ran, on which host, as which user. Each Pass cites the overlay's log
+  entry (page and `#n`, from the `data-last` answers you kept) and a screenshot you took. A check with no
+  entry or no screenshot is not a Pass: put it under Not checked. A step inside an iframe is only ever
+  drawn as a toast, so it cannot cite an element; say so.
+- **Overlay:** from the log, not from memory: which steps were drawn on their element, which went to the
+  toast, and the extension version.
 - **Not checked:** anything skipped, and why.
