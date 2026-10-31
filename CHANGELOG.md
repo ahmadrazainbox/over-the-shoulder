@@ -16,6 +16,12 @@
   if it did not happen, and never redo a save, submit, send or delete; ask the developer not to scroll
   during clicks; type straight after the click; send prompts to the corner toast with a selector that
   matches nothing.
+- Leaving a text field is not typing: the field's change event as it loses focus no longer adds a typing
+  entry or moves the outline back to it, beside the click that left it.
+- Skill and tools.md, from a fresh agent following only the skill: wait for a reload on a version
+  mismatch, a log read snippet, QA reports list each item Pass or Fail, choosing in a select, reading the
+  log in slices.
+- Trade-off: an agent click within 4 px of where the developer's pointer rests is counted as theirs.
 - Found with a regular mouse on the test page and two real web apps; two regular-mouse recordings are
   replayed in the tests.
 
