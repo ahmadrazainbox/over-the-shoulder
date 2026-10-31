@@ -108,3 +108,28 @@ test('real trace: Claude in Chrome while the developer moves their own mouse, ev
   // The developer's typing in Notes after their own click is not drawn: the last entry is the agent's.
   expect(log.filter((entry) => entry.action !== 'step').at(-1)).toMatchObject({ action: 'type', on: 'textbox "Name"', by: 'agent' });
 });
+
+// Recorded on 0.2.0 with a regular mouse (30 Oct 2026). The developer rested, then clicked with the mouse:
+// its button nudges the pointer 0 to 1 px just before the press, a lone move after the rest, which reset the
+// hand's stream, so 0.2.0 drew that click as the agent's. Their first move after a rest, or coming back from
+// below the page, was lit as an agent hover. Only the agent's clicks and hovers may be in the log.
+const agentOnly = async (page, name) => {
+  const trace = await load(name);
+  await replay(page, trace);
+  const log = await drawn(page);
+  const agentClicks = trace.events.filter((e) => e.type === 'pointerdown' && e.by === 'agent').length;
+  const clicks = entries(log, 'click');
+  expect(clicks).toHaveLength(agentClicks);
+  for (const click of clicks) { expect(click).toMatch(/ by agent$/); }
+  for (const hover of entries(log, 'hover')) { expect(pointedAt).toContain(hover); }
+  expect(log.filter((entry) => entry.by === 'hand')).toEqual([]);
+  return log;
+};
+
+test('real trace: a regular mouse at rest, the developer\'s clicks and moves are not drawn as the agent\'s', async ({ page }) => {
+  await agentOnly(page, '2026-10-30-mouse-rest.json');
+});
+
+test('real trace: a click after the mouse button nudged the pointer is the developer\'s', async ({ page }) => {
+  await agentOnly(page, '2026-10-30-mouse-nudge.json');
+});
