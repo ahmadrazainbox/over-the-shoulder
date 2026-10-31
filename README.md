@@ -17,7 +17,7 @@ It does not drive the browser itself. It sits on top of whatever your agent alre
 *Screenshot from a demo invoice app, with sample data: the extension outlines the changed total, numbers the
 step and labels what changed and where in the code.*
 
-> Status: 0.2.0, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
+> Status: 0.2.1, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
 
 ## Install
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.1 (2026-10-31)
+
+- The developer's own clicks are no longer drawn as the agent's (#15): a lone move within 4 px of where the
+  hand rests keeps the hand's stream and is not a jump, so a click after the pointer settles, or after the
+  mouse button nudges it, stays the developer's, also straight after the agent acted elsewhere. Still moves
+  that Chrome repeats at exactly the same spot do not count as a hand moving. A press within 40 ms (was
+  15) of a jump of more than 200 px is the agent's: Claude in Chrome pressed up to 20 ms after its move on
+  real pages.
+- The developer's mouse is no longer logged as agent hovers (#16): a hover taken back because a hand stream
+  followed is removed from the log too, and a move outside the page is never lit.
+- README and PRIVACY: typing straight after the agent's click, with no mouse action first, is drawn as the
+  agent's (#17).
+- Skill (#18): check every click in the log; if it is missing or wrong, take a screenshot first, redo only
+  if it did not happen, and never redo a save, submit, send or delete; ask the developer not to scroll
+  during clicks; type straight after the click; send prompts to the corner toast with a selector that
+  matches nothing.
+- Found with a regular mouse on the test page and two real web apps; two regular-mouse recordings are
+  replayed in the tests.
+
 ## 0.2.0 (2026-10-29)
 
 - The agent's clicks show while the developer moves their own mouse (#8): a press within 15 ms of a move
