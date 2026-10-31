@@ -25,9 +25,10 @@ Notes for Claude in Chrome:
 - `scroll` is not drawn and does not light anything; hover the next target after scrolling to it.
 - The developer may move their own mouse while you act. Your clicks, and the typing after them, still
   show (a click straight after a jump to its target is yours); a hover while their mouse is moving may not
-  light. A click within 200 CSS pixels of where their pointer is moving may also be missed: check
-  `data-last` or the log, and if an action is missing, ask the developer to keep the mouse still and do it
-  again.
+  light. A click within 200 CSS pixels of where their pointer is moving, or within 4 pixels of where it
+  rests, may also be missed: check the log (`log: true`), and if a click is missing, take a screenshot,
+  ask the developer to keep the mouse still, and do it again only if it did not happen (never a save,
+  submit, send or delete).
 - If a hover fails because the ref went stale after the page redrew, look the element up again before
   carrying on. Refs also go stale after a navigation or reload: `find` again first.
 - No GIF recording unless the developer asks for one.

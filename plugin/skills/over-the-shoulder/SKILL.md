@@ -59,6 +59,15 @@ This skill is written for extension version 0.2.0.
 - **Pause** 1 to 2 seconds so the developer sees the spotlight (the wait action in `references/tools.md`).
 - **Act** on the same target with the browser's own input: click or type on the same ref or coordinates.
   Never click or type through page JavaScript; the overlay only sees real input, and so should the test.
+- **Check the click landed:** after every click, send `{ log: true }` with no step and read the newest
+  click entry in `dataset.log`. If its `on` is not the element you meant, or there is no new click, say so
+  and take a screenshot before anything else: the page can move under a click (the developer scrolling, a
+  list still loading), and some real clicks are not logged (a target larger than half the page, a click
+  where the developer's own pointer rests). Do it again only if the screenshot shows it did not happen,
+  and never repeat a click that saves, submits, sends or deletes: ask the developer. Ask them not to
+  scroll while you click.
+- **Type straight after the click** that focused the field. The overlay draws typing as yours when your
+  click was the last pointer action, so a pause lets the developer's own typing be drawn as yours.
 - **After:** read the page or take a screenshot, then one line: what happened. Wait for the page to settle
   after a navigation or a save.
 - One action per tool call. No batching while the developer is watching.
@@ -75,7 +84,8 @@ recorded on this page (hovers, clicks, typing, steps; the newest 200) to `datase
 name elements by role and visible name only, never what was typed.
 
 Use `label` only for findings (a wrong figure, a confusing word), not to describe every step; the chat
-already does that.
+already does that. A step with no `selector` lands on whatever was lit since the last step; to put it in
+the corner toast instead, give it a `selector` that matches nothing.
 
 ## 3. Modes
 

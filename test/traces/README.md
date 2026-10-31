@@ -8,6 +8,8 @@ send, not only against Playwright's mouse.
 |---|---|
 | `2026-10-29-hand-still.json` | Claude in Chrome: hover, click after a hover, click straight after a click, typing, Tab, Enter, `form_input`, a `javascript_tool` click, a scroll. The developer's mouse moved before and after, not during. |
 | `2026-10-29-hand-moving.json` | The same kinds of agent actions while the developer kept moving their own mouse over the page; then the developer's own click and three key presses. On 0.1.1 the overlay drew 3 of its 7 agent clicks. |
+| `2026-10-30-mouse-rest.json` | A regular mouse: the developer rested, clicked fields and buttons, typed, and left the window by the bottom edge; Claude in Chrome acted between marks A and F with the hand still. On 0.2.0 the developer's first moves after a rest were logged as agent hovers. |
+| `2026-10-30-mouse-nudge.json` | The same, with a click where the mouse button nudged the pointer about 1 px just before the press, after a rest. On 0.2.0 that click was drawn as the agent's. |
 
 Each file has `recorded`, `how`, `chrome`, `extension` (the version that was running), `viewport`,
 `drawn` (the overlay's own log at the end of the recording) and `events`. Each event has its time in ms
@@ -27,6 +29,14 @@ part of the run. Printable keys are stored only as `char`, and no field values a
   developer's pointer, and the developer's next move landed back near where it had been. The agent's
   press came 0.5 to 3 ms after its move; the developer's own presses came 58 and 221 ms after their last
   move, which was a still one (no jump).
+
+## What the regular-mouse traces showed (Chrome 156, macOS)
+
+- A mouse reports fractional coordinates, as the trackpad did. After a rest, the hand settles 0 to 1 px
+  before a press, in one move or a few, each more than 120 ms after the last; the button itself can nudge
+  the pointer 8 to 20 ms before the press.
+- Leaving the window by the bottom edge sends still moves below the page (y beyond `innerHeight`).
+- On real pages (31 Oct 2026) Claude in Chrome pressed up to 20 ms after its move, by input time.
 
 ## Recording a new trace
 

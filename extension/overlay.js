@@ -252,7 +252,7 @@
   const light = (el, x, y, { quiet = false, action = '', trusted = true, by = 'agent' } = {}) => {
     const chosen = pick(el);
     if (!chosen) { return; }
-    if (action) { record({ action, on: describe(chosen), trusted, by }, chosen); }
+    const entry = action ? record({ action, on: describe(chosen), trusted, by }, chosen) : null;
     const same = chosen === target;
     if (!same) { raise(); hide(badge); hide(label); }
     target = chosen;
@@ -269,6 +269,7 @@
     endTimer = setTimeout(end, STAY_MS);
     lights++;
     if (!isTop) { try { window.top.postMessage({ overTheShoulder: 'lit' }, '*'); } catch { /* detached */ } }
+    return entry;
   };
 
   // After the extension is reloaded or updated, this copy loses its connection to it. It then removes its
@@ -294,7 +295,10 @@
   // So: a move landing near where the hand last was is the hand's, however large its step; a move that is
   // part of a stream is the hand's; a lone small step is treated as the hand's too (a short agent hop is
   // missed, but its click still shows); still moves in the first second after a load, or at the agent's
-  // own last spot, are ignored. Hover lighting is best effort; clicks are the reliable signal.
+  // own last spot, are ignored. A lone move within 4px of where the hand rests after a stream is the hand
+  // settling (a mouse button nudges the pointer as it is pressed), so the stream goes on. A move outside
+  // the page (the pointer below it, over the browser's own bar) is never lit. Hover lighting is best
+  // effort; clicks are the reliable signal.
   let loadedAt = performance.now();
   let lastMoveAt = -Infinity;
   let streak = 0;
@@ -303,6 +307,7 @@
   let jumpedAt = -Infinity;
   let agent = null;
   let litByMoveAt = -Infinity;
+  let litByMove = null;
   // Who last pointed at or clicked something: typing is shown only after the agent's own hover or click,
   // so the developer's typing is not outlined (unless "show my own clicks" is on). Nobody, after a load.
   let actor = null;
@@ -314,35 +319,44 @@
     const now = performance.now();
     const lone = now - lastMoveAt > 120;
     lastMoveAt = now;
-    jumpedAt = near(movedTo, e, 200) ? -Infinity : e.timeStamp;
+    // A move back to where the hand rests is no jump, even straight after the agent's pointer was elsewhere.
+    jumpedAt = near(movedTo, e, 200) || near(hand, e, 4) ? -Infinity : e.timeStamp;
+    // Chrome repeats still moves at exactly the same spot (where the agent's pointer was left, after the
+    // page changes): those are not a hand moving, so they do not add to its stream.
+    const repeat = movedTo?.x === e.clientX && movedTo?.y === e.clientY;
     movedTo = { x: e.clientX, y: e.clientY };
-    streak = lone ? 1 : streak + 1;
+    streak = !lone ? streak + (repeat ? 0 : 1) : (hand?.streak >= 3 && near(hand, e, 4) ? hand.streak : 1);
     const moved = Math.hypot(e.movementX, e.movementY);
     if (!lone && moved > 0 && now - litByMoveAt < 250) {
       // The "hover" just lit was the start of a hand stream; agents send one move, not a stream.
       litByMoveAt = -Infinity;
       if (actor === 'agent') { actor = 'hand'; }
       end();
+      // Nor is it left in the log, unless something was recorded after it.
+      if (litByMove && log.at(-1) === litByMove) { log.pop(); logged--; }
+      litByMove = null;
     }
     if (!lone || (moved > 0 && moved <= 80) || near(hand, e, 60)) { hand = { x: e.clientX, y: e.clientY, streak }; return; }
     if (moved === 0 && (now - loadedAt < 1000 || near(agent, e, 20))) { return; }
+    if (e.clientX < 0 || e.clientY < 0 || e.clientX > innerWidth || e.clientY > innerHeight) { return; }
     agent = { x: e.clientX, y: e.clientY };
     acted('agent');
     litByMoveAt = now;
-    light(hit(e), e.clientX, e.clientY, { action: 'hover' });
+    litByMove = light(hit(e), e.clientX, e.clientY, { action: 'hover' });
   }, true);
 
   // A click is the developer's own when it lands where their hand has been moving (a stream of moves, not
   // one lone hop, which is how a Playwright click arrives). Those are skipped unless "show my clicks" is on.
-  // But a press within 15 ms (by input time, so a busy page cannot squeeze the gap) of a move that jumped
+  // But a press within 40 ms (by input time, so a busy page cannot squeeze the gap) of a move that jumped
   // more than 200px is the agent's, even in the middle of the developer's own stream (they can move their
-  // mouse while the agent acts). In real traces Claude in Chrome pressed 0.5 to 3 ms after its one move,
+  // mouse while the agent acts). In real traces Claude in Chrome pressed 0.5 to 20 ms after its one move,
   // which landed 400px or more from the developer's pointer; of about 1,400 hand steps none was over 200px,
-  // and the developer's presses came after a still move. A developer who clicks within a frame of such a
-  // flick is taken for the agent; an agent click landing within 200px of the moving hand is missed.
+  // and the developer's presses came 100 ms or more after any such step. A developer who clicks within
+  // 40 ms of such a flick is taken for the agent; an agent click landing within 200px of the moving hand,
+  // or within 4px of where the developer's pointer rests, is missed.
   addEventListener('pointerdown', (e) => {
     if (gone() || !e.isTrusted) { return; }
-    const mine = e.timeStamp - jumpedAt >= 15 && near(hand, e, 4) && hand.streak >= 3;
+    const mine = e.timeStamp - jumpedAt >= 40 && near(hand, e, 4) && hand.streak >= 3;
     acted(mine ? 'hand' : 'agent');
     if (mine && !showMine) { return; }
     if (!mine) { agent = { x: e.clientX, y: e.clientY }; }
