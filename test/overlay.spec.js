@@ -311,6 +311,18 @@ test('an agent click 25 ms after its jump, while the hand keeps moving, is the a
   expect(log.find((entry) => entry.action === 'click')).toMatchObject({ on: 'textbox "Name"', by: 'agent' });
 });
 
+test("leaving a field the agent typed in, with a click elsewhere, draws the click, not more typing", async ({ page }) => {
+  // The field fires change as it loses focus; that is not typing, and must not take the outline back.
+  await page.click('#name');
+  await page.keyboard.type('Ada');
+  await page.click('#far');
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action !== 'step').map((entry) => `${entry.action} ${entry.on}`).slice(-2)).toEqual([
+    'type textbox "Name"', 'click button "Far button"',
+  ]);
+  await expectSpotOn(page, '#far');
+});
+
 test('a "lit" notice from a window that is not one of its frames is ignored', async ({ page, context }) => {
   await agentHover(page, '#save');
   await expect.poll(async () => (await overlay(page)).spot).not.toBeNull();
