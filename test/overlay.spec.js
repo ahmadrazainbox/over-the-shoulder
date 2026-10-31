@@ -241,6 +241,32 @@ test('a hover taken back because the hand moved on is not left in the log', asyn
   expect(log.filter((entry) => entry.action === 'hover')).toEqual([]);
 });
 
+test("the developer's click where their pointer rests, straight after the agent acted elsewhere, is theirs", async ({ page }) => {
+  // The agent's pointer was last on Far; the developer's button nudges their resting pointer on Name.
+  const cdp = await page.context().newCDPSession(page);
+  const move = (x, y) => cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+  const press = async (x, y) => {
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
+  };
+  const name = await centre(page, '#name');
+  const far = await centre(page, '#far');
+  for (const gap of [10, 20]) {
+    for (let i = 8; i >= 0; i--) { await move(name.x - i * 6, name.y); await page.waitForTimeout(16); }
+    await page.waitForTimeout(400);
+    await move(far.x, far.y);
+    await press(far.x, far.y);
+    await page.waitForTimeout(600);
+    await move(name.x + 1, name.y);
+    await page.waitForTimeout(gap);
+    await press(name.x + 1, name.y);
+  }
+  const log = await drawnLog(page);
+  expect(log.filter((entry) => entry.action === 'click').map((entry) => `${entry.on} by ${entry.by}`)).toEqual([
+    'button "Far button" by agent', 'button "Far button" by agent',
+  ]);
+});
+
 test('an agent click 25 ms after its jump, while the hand keeps moving, is the agent\'s', async ({ page }) => {
   // On real pages Claude in Chrome pressed up to 20 ms after its move.
   await page.mouse.move(800, 500);

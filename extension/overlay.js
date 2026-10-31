@@ -319,7 +319,8 @@
     const now = performance.now();
     const lone = now - lastMoveAt > 120;
     lastMoveAt = now;
-    jumpedAt = near(movedTo, e, 200) ? -Infinity : e.timeStamp;
+    // A move back to where the hand rests is no jump, even straight after the agent's pointer was elsewhere.
+    jumpedAt = near(movedTo, e, 200) || near(hand, e, 4) ? -Infinity : e.timeStamp;
     movedTo = { x: e.clientX, y: e.clientY };
     streak = !lone ? streak + 1 : (hand?.streak >= 3 && near(hand, e, 4) ? hand.streak : 1);
     const moved = Math.hypot(e.movementX, e.movementY);
