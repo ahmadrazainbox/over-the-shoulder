@@ -384,7 +384,11 @@
   };
   addEventListener('keydown', (e) => { if (e.isTrusted) { typed(e); } }, true);
   addEventListener('input', typed, true);
-  addEventListener('change', typed, true);
+  // A text field fires a trusted change only when it loses focus (or on Enter), after its typing was drawn
+  // from its keys: drawn again, it would outline the field just left, beside the click that left it.
+  const TEXT = ['text', 'search', 'email', 'url', 'tel', 'password', 'number'];
+  const left = (el) => el instanceof Element && (el.matches('textarea') || (el.matches('input') && TEXT.includes(el.type)));
+  addEventListener('change', (e) => { if (!(e.isTrusted && left(hit(e)))) { typed(e); } }, true);
 
   // A page that changes without a reload would otherwise keep a spotlight on an element now elsewhere.
   // Cleared a moment later, so the click that caused the navigation is still seen.

@@ -31,9 +31,10 @@ This skill is written for extension version 0.2.0.
    or browser page) and ask before going on without it. Never say the overlay was visible without having
    seen it.
 4. Read the extension's version right after that step 0 event:
-   `document.querySelector('[data-over-the-shoulder]')?.dataset.version`. A different version: tell the
-   developer which two you see. After they reload the extension, the page must be reloaded too, or it
-   keeps the old one. Nothing there, although the toast showed: the extension is older than 0.2.0 and
+   `document.querySelector('[data-over-the-shoulder]')?.dataset.version` (some browser tools hide a
+   dotted string like this one; read it as `.split('.')` if so). A different version: tell the developer
+   which two you see and wait for them to reload the extension before going on. After they reload it, the
+   page must be reloaded too, or it keeps the old one. Nothing there, although the toast showed: the extension is older than 0.2.0 and
    keeps no log. Say so, and go on without it: steps get no `data-last`, each Pass cites a screenshot only,
    and the report says "Overlay log: not available (extension older than 0.2.0)".
 
@@ -60,7 +61,8 @@ This skill is written for extension version 0.2.0.
 - **Act** on the same target with the browser's own input: click or type on the same ref or coordinates.
   Never click or type through page JavaScript; the overlay only sees real input, and so should the test.
 - **Check the click landed:** after every click, send `{ log: true }` with no step and read the newest
-  click entry in `dataset.log`. If its `on` is not the element you meant, or there is no new click, say so
+  click entry in
+  `JSON.parse(document.querySelector('[data-over-the-shoulder]').dataset.log || '[]').slice(-5)`. If its `on` is not the element you meant, or there is no new click, say so
   and take a screenshot before anything else: the page can move under a click (the developer scrolling, a
   list still loading), and some real clicks are not logged (a target larger than half the page, a click
   where the developer's own pointer rests). Do it again only if the screenshot shows it did not happen,
@@ -143,7 +145,8 @@ so:
 
 Always in this shape, in plain words:
 
-- **What was shown** (Show the change, Explore) or **what was wrong** (Debug), with the numbered steps.
+- **What was shown** (Show the change, Explore), **what was wrong** (Debug), or each checklist item with
+  Pass or Fail (QA), with the numbered steps.
 - **Code behind it:** the files and `file:line` each visible difference comes from.
 - **Findings:** each with severity, page, user, and whether it was checked in the code.
 - **What changed:** files and commits, or "nothing changed".

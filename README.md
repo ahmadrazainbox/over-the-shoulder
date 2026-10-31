@@ -59,7 +59,7 @@ Your own mouse and typing are left alone: an agent's hover is a single jump, whi
 of small moves, and typing is shown only after the agent's own hover or click. Turn on **Also show my own
 clicks** in the popup if you want yours too. Telling the two apart is a best guess, not a guarantee: a
 short agent hop can go unlit, and an unusual hand movement can occasionally light something. Keys carry
-no position, so if you type into a field the agent has just clicked, without touching the mouse first,
+no position, so if you type into a field the agent has just clicked, without clicking it yourself first,
 your typing is drawn as the agent's.
 
 ## Voice

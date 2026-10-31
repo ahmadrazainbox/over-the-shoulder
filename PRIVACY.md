@@ -14,7 +14,7 @@ visit or what you do on them, beyond the short in-page list described below.
   also change it, so on a page you do not trust it is not evidence. It is gone when the page is closed or
   reloaded, and holds at most 200 entries.
 - It has no server, no analytics and makes no network requests.
-- Keys carry no position, so typing straight after the agent's click, with no mouse action first, is
+- Keys carry no position, so typing straight after the agent's click, with no click of your own first, is
   counted as the agent's, yours included. Only the field is named, never what was typed.
 - Its only stored data is your settings (voice on or off, voice, speed, mode, "show my own clicks") in
   Chrome's extension storage on your computer. The sites you enable are held by Chrome as ordinary
