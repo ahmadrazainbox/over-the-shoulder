@@ -321,8 +321,11 @@
     lastMoveAt = now;
     // A move back to where the hand rests is no jump, even straight after the agent's pointer was elsewhere.
     jumpedAt = near(movedTo, e, 200) || near(hand, e, 4) ? -Infinity : e.timeStamp;
+    // Chrome repeats still moves at exactly the same spot (where the agent's pointer was left, after the
+    // page changes): those are not a hand moving, so they do not add to its stream.
+    const repeat = movedTo?.x === e.clientX && movedTo?.y === e.clientY;
     movedTo = { x: e.clientX, y: e.clientY };
-    streak = !lone ? streak + 1 : (hand?.streak >= 3 && near(hand, e, 4) ? hand.streak : 1);
+    streak = !lone ? streak + (repeat ? 0 : 1) : (hand?.streak >= 3 && near(hand, e, 4) ? hand.streak : 1);
     const moved = Math.hypot(e.movementX, e.movementY);
     if (!lone && moved > 0 && now - litByMoveAt < 250) {
       // The "hover" just lit was the start of a hand stream; agents send one move, not a stream.
