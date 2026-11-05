@@ -54,7 +54,7 @@ This skill is written for extension version 0.2.1.
 - **Read back** what the step drew, in the same JavaScript call that sends it:
   `JSON.parse(document.querySelector('[data-over-the-shoulder]').dataset.last || 'null')` gives the
   entry number `n`, the `step` and `on` (the element, such as `button "Save"`, or `toast`). Check that
-  `step` is the one you sent; nothing there means the event drew nothing. If `on` is not the element you
+  `step` is the one you sent (it comes back as text: `4` reads `'4'`); nothing there means the event drew nothing. If `on` is not the element you
   meant, say so before acting. Keep each answer: the numbers start again at 1 after a page load, so cite
   an entry as page and number ("/invoices #4").
 - **Pause** 1 to 2 seconds so the developer sees the spotlight (the wait action in `references/tools.md`).
@@ -77,7 +77,9 @@ This skill is written for extension version 0.2.1.
 
 `detail` must be a JSON string (the page and the extension run in separate JavaScript worlds). Fields:
 `step` (number or short text, shown as a badge), `label` (a finding, up to 200 characters, shown beside
-the target until the next one), `say` (up to 300 characters, spoken only if the developer switched voice
+the target until you act on another element, send a step for another target, the element is removed or
+replaced by a different-looking one, the page navigates or 60 seconds pass; only one shows at a time, so take each result's screenshot while it
+shows, and send a `label` with each step on the same element, or the previous finding stays), `say` (up to 300 characters, spoken only if the developer switched voice
 on in the popup), `selector` (the step's own target in the top page; one that is not found sends the step
 to the toast; `at: { x, y }` in the page's CSS pixels also works, for tools that use those). With nothing
 lit, the step and label show as a toast in the corner. A new step with nothing lit since the last one also

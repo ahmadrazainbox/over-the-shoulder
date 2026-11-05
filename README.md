@@ -86,6 +86,17 @@ pixels, instead of `selector`) and `log` (`true` writes the page's log of what w
 The overlay answers on its host element, `document.querySelector('[data-over-the-shoulder]')`:
 `dataset.last` is what the latest step drew (`on`: the element, or `toast`), `dataset.log` the log as JSON
 (after `log: true`), `dataset.version` the extension's version. The skill reads these to check its report.
+On each page load the host is added only at the first step event with a `step`, `label` or `log`, or the
+first hover, click or typing it draws, so before that it is not there even when the overlay runs. To check
+that it runs, send a step 0 event, as the skill does, and look for the toast.
+
+One step badge and one finding label show at a time. They follow their element as the page scrolls, and
+clear when the agent acts on another element or sends a step for another target (or one whose `selector`
+matches nothing, or a new step with nothing lit since the last one), when the element is removed or
+replaced by a different-looking one, when the page navigates, when the agent acts inside an iframe, or 60
+seconds after the element was lit. A step on the same element without a `label` keeps the previous finding
+beside its new badge, and a `label` without a `step` keeps the previous badge. So a screenshot usually
+shows one step's result; the report lists them all.
 
 Any script on a page where the overlay runs can send this event, not only your agent, and could also draw
 look-alike marks of its own. So treat the overlay as a guide to follow the agent, not as proof of what it
