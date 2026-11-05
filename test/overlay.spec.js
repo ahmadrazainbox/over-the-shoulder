@@ -590,6 +590,45 @@ test("a code editor's drawn lines and an ARIA text box give no text", async ({ p
   for (const typed of ['apiKey', 'sk-', 'typed']) { expect(text).not.toContain(typed); }
 });
 
+test('fields and controls are logged with the role the browser gives them (HTML-AAM)', async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <datalist id="sizes"><option value="S"></option></datalist>
+      <input id="r-number" type="number"> <input id="r-search" type="search">
+      <input id="r-search-list" type="search" list="sizes"> <input id="r-text-list" list="sizes">
+      <input id="r-email-list" type="email" list="sizes"> <input id="r-email" type="email">
+      <input id="r-number-list" type="number" list="sizes"> <input id="r-dead-list" list="nothing-here"> <input id="r-upper" type="NUMBER"> <input id="r-bogus" type="bogus">
+      <input id="r-password" type="password"> <input id="r-date" type="date"> <input id="r-color" type="color">
+      <input id="r-image" type="image" alt="Go"> <input id="r-file" type="file">
+      <select id="r-multi" multiple><option>A</option></select> <select id="r-rows" size="3"><option>A</option></select>
+      <select id="r-drop"><option>A</option></select> <select id="r-multi-one" multiple size="1"><option>A</option></select>
+      <a id="r-nohref">Remove</a> <a id="r-link" href="#x">Help</a> <input id="r-slider" type="number" role="slider">
+    </section>`);
+  });
+  const expected = {
+    number: 'spinbutton', search: 'searchbox', 'search-list': 'combobox', 'text-list': 'combobox',
+    'email-list': 'combobox', 'number-list': 'combobox', email: 'textbox', 'dead-list': 'textbox', upper: 'spinbutton', bogus: 'textbox',
+    password: 'textbox', date: 'date', color: 'color', image: 'button "Go"', file: 'button', multi: 'listbox',
+    rows: 'listbox', drop: 'combobox', 'multi-one': 'listbox', nohref: 'generic "Remove"', link: 'link "Help"',
+    slider: 'slider',
+  };
+  const seen = {};
+  let step = 0;
+  for (const key of Object.keys(expected)) {
+    await send(page, { step: ++step, selector: `#r-${key}` });
+    seen[key] = (await ots(page, 'last'))?.on;
+  }
+  expect(seen).toEqual(expected);
+});
+
+test("a file input's chosen file never becomes its name", async ({ page }) => {
+  await page.evaluate(() => { document.body.insertAdjacentHTML('afterbegin', '<input id="r-file" type="file">'); });
+  await page.setInputFiles('#r-file', { name: 'private-scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('x') });
+  await send(page, { step: 1, selector: '#r-file' });
+  expect((await ots(page, 'last')).on).toBe('button');
+  expect(JSON.stringify(await drawnLog(page))).not.toContain('private');
+});
+
 test('two fields with the same name, typed one after the other, are two entries', async ({ page }) => {
   await page.locator('#qty1').click();
   await page.keyboard.type('1');
