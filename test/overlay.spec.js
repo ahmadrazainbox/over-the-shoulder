@@ -590,6 +590,136 @@ test("a code editor's drawn lines and an ARIA text box give no text", async ({ p
   for (const typed of ['apiKey', 'sk-', 'typed']) { expect(text).not.toContain(typed); }
 });
 
+test('fields and controls are logged with the role the browser gives them (HTML-AAM)', async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <datalist id="sizes"><option value="S"></option></datalist>
+      <input id="r-number" type="number"> <input id="r-search" type="search">
+      <input id="r-search-list" type="search" list="sizes"> <input id="r-text-list" list="sizes">
+      <input id="r-email-list" type="email" list="sizes"> <input id="r-email" type="email">
+      <input id="r-number-list" type="number" list="sizes"> <input id="r-dead-list" list="nothing-here"> <input id="r-upper" type="NUMBER"> <input id="r-bogus" type="bogus">
+      <input id="r-password" type="password"> <input id="r-date" type="date"> <input id="r-color" type="color">
+      <input id="r-image" type="image" alt="Go"> <input id="r-file" type="file">
+      <select id="r-multi" multiple><option>A</option></select> <select id="r-rows" size="3"><option>A</option></select>
+      <select id="r-drop"><option>A</option></select> <select id="r-multi-one" multiple size="1"><option>A</option></select>
+      <a id="r-nohref">Remove</a> <a id="r-link" href="#x">Help</a> <input id="r-slider" type="number" role="slider">
+    </section>`);
+  });
+  const expected = {
+    number: 'spinbutton', search: 'searchbox', 'search-list': 'combobox', 'text-list': 'combobox',
+    'email-list': 'combobox', 'number-list': 'combobox', email: 'textbox', 'dead-list': 'textbox', upper: 'spinbutton', bogus: 'textbox',
+    password: 'textbox', date: 'date', color: 'color', image: 'button "Go"', file: 'button', multi: 'listbox',
+    rows: 'listbox', drop: 'combobox', 'multi-one': 'listbox', nohref: 'generic "Remove"', link: 'link "Help"',
+    slider: 'slider',
+  };
+  const seen = {};
+  let step = 0;
+  for (const key of Object.keys(expected)) {
+    await send(page, { step: ++step, selector: `#r-${key}` });
+    seen[key] = (await ots(page, 'last'))?.on;
+  }
+  expect(seen).toEqual(expected);
+});
+
+test("a file input's chosen file never becomes its name", async ({ page }) => {
+  await page.evaluate(() => { document.body.insertAdjacentHTML('afterbegin', '<input id="r-file" type="file">'); });
+  await page.setInputFiles('#r-file', { name: 'private-scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('x') });
+  await send(page, { step: 1, selector: '#r-file' });
+  expect((await ots(page, 'last')).on).toBe('button');
+  expect(JSON.stringify(await drawnLog(page))).not.toContain('private');
+});
+
+test("a step's badge and finding do not move to a different element that takes the removed one's place", async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: total' });
+  expect((await overlay(page)).label).not.toBeNull();
+  await page.evaluate(() => {
+    const other = Object.assign(document.createElement('button'), { textContent: 'Delete' });
+    document.querySelector('#save').replaceWith(other);
+  });
+  await expect.poll(async () => (await overlay(page)).label).toBeNull();
+  const state = await overlay(page);
+  expect(state.badge).toBeNull();
+  expect(state.spot).not.toBeNull();
+});
+
+test('a re-rendered copy of the same control keeps its step badge and finding', async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: total' });
+  await page.evaluate(() => { const old = document.querySelector('#save'); old.replaceWith(old.cloneNode(true)); });
+  await page.waitForTimeout(300);
+  const state = await overlay(page);
+  expect(state.badge?.text).toBe('1');
+  expect(state.label?.text).toBe('Pass: total');
+  await expectSpotOn(page, '#save');
+});
+
+test('a step sent as its element is replaced by a different one goes to the toast, and says so', async ({ page }) => {
+  await page.click('#save');
+  // The swap and the step in one task, before the overlay's next frame can notice the swap.
+  await page.evaluate(() => {
+    document.querySelector('#save').replaceWith(Object.assign(document.createElement('button'), { textContent: 'Delete' }));
+    window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 5, label: 'Pass: saved' }) }));
+  });
+  expect(await ots(page, 'last')).toMatchObject({ step: '5', on: 'toast' });
+  const state = await overlay(page);
+  expect(state.badge).toBeNull();
+  expect(state.label).toBeNull();
+  expect(state.toast?.text).toContain('Pass: saved');
+});
+
+test('a step sent frames after its element was replaced by a different one goes to the toast', async ({ page }) => {
+  await page.click('#save');
+  await page.evaluate(() => {
+    document.querySelector('#save').replaceWith(Object.assign(document.createElement('button'), { textContent: 'Delete' }));
+  });
+  // As an agent would: a screenshot or a pause between the change and the step.
+  await page.waitForTimeout(300);
+  expect((await overlay(page)).spot).not.toBeNull();
+  await send(page, { step: 5, label: 'Pass: saved' });
+  expect(await ots(page, 'last')).toMatchObject({ step: '5', on: 'toast' });
+  const state = await overlay(page);
+  expect(state.badge).toBeNull();
+  expect(state.label).toBeNull();
+  expect(state.toast?.text).toContain('Pass: saved');
+});
+
+test('a step without a selector, on a control renamed in place, stays on it when it is re-rendered', async ({ page }) => {
+  await page.click('#save');
+  await page.evaluate(() => { document.querySelector('#save').textContent = 'Saved'; });
+  await send(page, { step: 2, label: 'Pass: saved' });
+  expect((await ots(page, 'last')).on).toBe('button "Saved"');
+  await page.evaluate(() => { const old = document.querySelector('#save'); old.replaceWith(old.cloneNode(true)); });
+  await page.waitForTimeout(300);
+  const state = await overlay(page);
+  expect(state.badge?.text).toBe('2');
+  expect(state.label?.text).toBe('Pass: saved');
+  await send(page, { step: 2, label: 'Pass: still saved' });
+  expect(await ots(page, 'last')).toMatchObject({ step: '2', on: 'button "Saved"' });
+});
+
+test('a step sent as its element is replaced by an identical copy is drawn on the copy', async ({ page }) => {
+  await page.click('#save');
+  await page.evaluate(() => {
+    const old = document.querySelector('#save');
+    old.replaceWith(old.cloneNode(true));
+    window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 6, label: 'Pass: saved' }) }));
+  });
+  expect(await ots(page, 'last')).toMatchObject({ step: '6', on: 'button "Save"' });
+  expect((await overlay(page)).label?.text).toBe('Pass: saved');
+  await expectSpotOn(page, '#save');
+});
+
+test('a control renamed in place and then re-rendered keeps the step badge and finding given after the rename', async ({ page }) => {
+  await page.click('#save');
+  await page.evaluate(() => { document.querySelector('#save').textContent = 'Saved'; });
+  await send(page, { step: 2, selector: '#save', label: 'Pass: saved' });
+  expect((await ots(page, 'last')).on).toBe('button "Saved"');
+  await page.evaluate(() => { const old = document.querySelector('#save'); old.replaceWith(old.cloneNode(true)); });
+  await page.waitForTimeout(300);
+  const state = await overlay(page);
+  expect(state.badge?.text).toBe('2');
+  expect(state.label?.text).toBe('Pass: saved');
+});
+
 test('two fields with the same name, typed one after the other, are two entries', async ({ page }) => {
   await page.locator('#qty1').click();
   await page.keyboard.type('1');

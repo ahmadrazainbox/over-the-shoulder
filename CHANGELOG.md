@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Inputs, selects and links are logged with the role the browser gives them (#22), per HTML-AAM §3.5 and
+  Chrome: a number field is a `spinbutton` (was `textbox`), a search field a `searchbox`, a text-like or
+  number field whose `list` names a datalist a `combobox`, an image or file input a `button`, a select
+  shown as a list a `listbox`, and a link without `href` is `generic`, still named by its visible text.
+  Date, time, month, week and color inputs are named by their type. A file input's chosen file is never
+  read. Found in a Claude in Chrome QA run on a shop's cart.
+- A step's badge and finding no longer move to a different-looking element that takes a removed element's
+  place, and a later step without its own `selector` goes to the corner toast rather than onto it; a
+  re-rendered copy of the same control keeps them. Two identical controls (a Delete button in each row)
+  still cannot be told apart.
+- README and skill: the overlay's host element appears only at the first step event or drawn action on
+  each page, so a step 0 event is the check that it runs; one step badge and finding show at a time, and
+  what clears them; a step comes back as text.
+
 ## 0.2.1 (2026-10-31)
 
 - The developer's own clicks are no longer drawn as the agent's (#15): a lone move within 4 px of where the

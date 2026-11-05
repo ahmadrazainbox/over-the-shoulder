@@ -137,6 +137,11 @@
   };
 
   let target = null;
+  // The lit element's role and name, to tell a re-rendered copy of it from a different element.
+  let targetIs = '';
+  // Set when the lit element was replaced by a different-looking one: the outline then sits on a stranger,
+  // which a step without its own target must not be drawn on. Cleared when something is lit.
+  let stranger = false;
   // How many times something has been lit, so a step can tell whether anything was lit since the last one.
   let lights = 0;
   let at = { x: 0, y: 0 };
@@ -148,10 +153,16 @@
 
   // Follows the element every frame while lit, so it stays on it when the page scrolls, writing only when
   // the box has moved. If a framework replaces the element, the one now under the same spot takes over.
+  // The step badge and finding go with it only if it looks like the same control (same role and name as
+  // when it was last lit or given a step), so a "Pass" is not shown on a different-looking element that
+  // moved into its place. Two identical controls (a "Delete" button in each row) cannot be told apart.
   const draw = () => {
     if (target && !target.isConnected) {
       const replacement = pick(deepAt(at.x, at.y));
       if (!replacement) { end(); return; }
+      const is = describe(replacement);
+      if (is !== targetIs) { hide(badge); hide(label); stranger = true; }
+      targetIs = is;
       target = replacement;
       last = '';
     }
@@ -196,7 +207,27 @@
   host.dataset.version = VERSION;
   const ROLES = { A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', LI: 'listitem', TD: 'cell',
     TH: 'columnheader', LABEL: 'label', SUMMARY: 'button', IFRAME: 'iframe', DIALOG: 'dialog' };
-  const INPUTS = { checkbox: 'checkbox', radio: 'radio', button: 'button', submit: 'button', reset: 'button', range: 'slider' };
+  // An input's role from its type, as browsers expose it: HTML-AAM §3.5, HTML Element Role Mappings
+  // (https://w3c.github.io/html-aam/#html-element-role-mappings): number is a spinbutton (§3.5.68), search
+  // a searchbox (§3.5.73), image a button (§3.5.66); text, search, email, tel and url with a `list` that
+  // names a <datalist> are a combobox (§3.5.77), and so is number in Chrome, though §3.5.77 leaves it
+  // out. File has no ARIA role (§3.5.64); Chrome shows it as a button. Password (§3.5.69) is a textbox
+  // in Chrome. Date (§3.5.61), datetime-local, month, week, time and color have no role
+  // either, so they are named by their type rather than taken for a text box.
+  const INPUTS = { checkbox: 'checkbox', radio: 'radio', button: 'button', submit: 'button', reset: 'button',
+    image: 'button', file: 'button', range: 'slider', number: 'spinbutton', search: 'searchbox',
+    date: 'date', 'datetime-local': 'datetime-local', month: 'month', week: 'week', time: 'time', color: 'color' };
+  const LISTED = ['text', 'search', 'email', 'tel', 'url', 'number'];
+  // `list` is the <datalist> the attribute names, or null if there is none (Chrome then shows a textbox).
+  const inputRole = (el) => (LISTED.includes(el.type) && el.list ? 'combobox' : INPUTS[el.type] || 'textbox');
+  // A select shown as a list box (multiple, or more than one row) is a listbox (§3.5.115), otherwise a
+  // combobox (§3.5.116); a link without href is no link (§3.5.3, generic). Only inputs, selects and links
+  // are mapped this closely; the other tags keep the plain roles above.
+  const tagRole = (el) => {
+    if (el.tagName === 'SELECT' && (el.multiple || el.size > 1)) { return 'listbox'; }
+    if (el.tagName === 'A' && !el.hasAttribute('href')) { return 'generic'; }
+    return ROLES[el.tagName];
+  };
   const NAMED_BY_TEXT = new Set(['link', 'button', 'label', 'heading', 'listitem', 'cell', 'columnheader',
     'rowheader', 'option', 'tab', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'checkbox', 'radio', 'switch',
     'treeitem']);
@@ -211,7 +242,7 @@
   const describe = (el) => {
     if (!(el instanceof Element)) { return ''; }
     const tag = el.tagName;
-    const role = el.getAttribute('role') || (tag === 'INPUT' ? INPUTS[el.type] || 'textbox' : ROLES[tag])
+    const role = el.getAttribute('role') || (tag === 'INPUT' ? inputRole(el) : tagRole(el))
       || (/^H[1-6]$/.test(tag) ? 'heading' : tag.toLowerCase());
     // A text box without contenteditable (an ARIA widget) counts as a field too.
     const field = editable(el) || /^(textbox|searchbox|spinbutton|combobox)$/.test(el.getAttribute('role') || '');
@@ -220,14 +251,17 @@
     const name = el.getAttribute('aria-label')
       || referred.map(safeText).join(' ')
       || (el.labels?.[0] ? safeText(el.labels[0]) : '')
-      // A button input's caption is set by the page, not typed.
-      || (tag === 'INPUT' && INPUTS[el.type] === 'button' ? el.value : '')
+      // A button input's caption is set by the page, not typed. Not a file input's value: that is the file
+      // the person chose.
+      || (tag === 'INPUT' && ['button', 'submit', 'reset'].includes(el.type) ? el.value : '')
       || el.getAttribute('alt') || el.getAttribute('placeholder')
       // Pages sometimes copy a field's value into its title, so a field's title is not read.
       || (field ? '' : el.getAttribute('title'))
       // Visible text only for elements that are named by it. A plain div, span or pre can be where a code
       // editor or terminal draws what was typed (its keys go to a hidden field), so those get no text.
-      || (field || !NAMED_BY_TEXT.has(role) ? '' : safeText(el));
+      // A link without href is often used as a button, so it keeps its visible text as a name, which the
+      // agent needs to tell such links apart (the spec gives a generic no name, but nothing is typed there).
+      || (field || !(NAMED_BY_TEXT.has(role) || (tag === 'A' && role === 'generic')) ? '' : safeText(el));
     return clip(name) ? `${role} "${clip(name)}"` : role;
   };
   const log = [];
@@ -252,9 +286,12 @@
   const light = (el, x, y, { quiet = false, action = '', trusted = true, by = 'agent' } = {}) => {
     const chosen = pick(el);
     if (!chosen) { return; }
-    const entry = action ? record({ action, on: describe(chosen), trusted, by }, chosen) : null;
+    const is = describe(chosen);
+    const entry = action ? record({ action, on: is, trusted, by }, chosen) : null;
     const same = chosen === target;
     if (!same) { raise(); hide(badge); hide(label); }
+    targetIs = is;
+    stranger = false;
     target = chosen;
     at = { x, y };
     last = '';
@@ -467,6 +504,11 @@
       // A new step with nothing lit since the last one: the lit element belongs to that step.
       end();
     }
+    // The lit element may have been replaced by a different-looking one, just now or frames ago. A step
+    // that does not name its own target is then not drawn on, or reported for, the element that took its
+    // place: it goes to the toast instead.
+    if (target && !target.isConnected) { draw(); }
+    if (target && stranger && detail.selector === undefined && detail.at === undefined) { end(); }
     if (!target) {
       toast.replaceChildren();
       if (step) { toast.append(Object.assign(document.createElement('b'), { textContent: step })); }
@@ -489,6 +531,8 @@
     }
     last = '';
     draw();
-    answer(record({ action: 'step', step, on: describe(target), label: Boolean(text) }));
+    // What this step was drawn on, as it reads now (its text may have changed since it was lit).
+    targetIs = describe(target);
+    answer(record({ action: 'step', step, on: targetIs, label: Boolean(text) }));
   });
 })();
