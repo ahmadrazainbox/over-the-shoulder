@@ -720,6 +720,75 @@ test('a control renamed in place and then re-rendered keeps the step badge and f
   expect(state.label?.text).toBe('Pass: saved');
 });
 
+test('clicking a checkbox or radio logs the click, not typing (#25)', async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <label><input id="c-box" type="checkbox"> Agree</label>
+      <label><input id="c-radio" type="radio" name="c-pick"> Card</label>
+    </section>`);
+  });
+  await page.click('#c-box');
+  await page.waitForTimeout(400);
+  await page.click('#c-radio');
+  await page.waitForTimeout(400);
+  // Its label's text: the press lands on the label, the input toggles.
+  await page.locator('label', { hasText: 'Agree' }).click({ position: { x: 40, y: 5 } });
+  const log = await drawnLog(page);
+  const seen = log.filter((entry) => entry.action !== 'step').map((entry) => `${entry.action} ${entry.on}`);
+  expect(seen).toContain('click checkbox "Agree"');
+  expect(seen).toContain('click radio "Card"');
+  expect(seen).toContain('click label "Agree"');
+  expect(seen.filter((entry) => entry.startsWith('type'))).toEqual([]);
+  expect(await page.locator('#c-box').isChecked()).toBe(false);
+});
+
+test("a script's click on a checkbox, and an arrow key in a radio group, still count as typing (#25)", async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <label><input id="c-js" type="checkbox"> By js click</label>
+      <label><input id="r-one" type="radio" name="r-pick"> One</label>
+      <label><input id="r-two" type="radio" name="r-pick"> Two</label>
+    </section>`);
+  });
+  // The agent's last action was a click elsewhere; then a form tool toggles the box with el.click().
+  await page.click('#save');
+  await page.evaluate(() => document.querySelector('#c-js').click());
+  await page.waitForTimeout(400);
+  await page.click('#r-one');
+  await page.waitForTimeout(1100);
+  await page.keyboard.press('ArrowDown');
+  const log = await drawnLog(page);
+  expect(await page.locator('#c-js').isChecked()).toBe(true);
+  expect(await page.locator('#r-two').isChecked()).toBe(true);
+  expect(log).toContainEqual(expect.objectContaining({ action: 'type', on: 'checkbox "By js click"' }));
+  expect(log).toContainEqual(expect.objectContaining({ action: 'type', on: 'radio "Two"' }));
+});
+
+test("a checkbox the agent's form tool sets by script, and Space on a checkbox, still count as typing", async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <label><input id="c-script" type="checkbox"> By script</label>
+      <label><input id="c-space" type="checkbox"> By space</label>
+    </section>`);
+  });
+  await page.click('#c-script');
+  // As a form-filling tool does it: set by script, then announced with untrusted events.
+  await page.evaluate(() => {
+    const box = document.querySelector('#c-script');
+    box.checked = !box.checked;
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    box.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForTimeout(400);
+  await page.click('#c-space');
+  await page.keyboard.press('Space');
+  const log = await drawnLog(page);
+  // (On main the click itself already added a typing entry, which the script's merges into; here it adds one.)
+  expect(log).toContainEqual(expect.objectContaining({ action: 'type', on: 'checkbox "By script"' }));
+  expect(log).toContainEqual(expect.objectContaining({ action: 'type', on: 'checkbox "By space"', trusted: true }));
+  expect(await page.locator('#c-space').isChecked()).toBe(false);
+});
+
 test('two fields with the same name, typed one after the other, are two entries', async ({ page }) => {
   await page.locator('#qty1').click();
   await page.keyboard.type('1');

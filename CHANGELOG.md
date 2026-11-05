@@ -6,6 +6,9 @@
   field, then check the click; a selector for a target with no id or label, checked to match one element;
   a triple-click logs three clicks; the log names elements as the browser does, not as `find` does; two
   unnamed fields are told apart by the step's selector; the corner toast can cover the page's Save button.
+- Clicking a checkbox or radio, or its label, no longer adds a typing entry after the click (#25): the
+  trusted input and change that follow a real press on it are the click's own. One set or clicked by a
+  script (an agent's form tool), toggled with Space or chosen with the arrow keys still counts as typing.
 
 ## 0.2.2 (2026-11-06)
 
