@@ -857,6 +857,88 @@ test("a checkbox the agent's form tool sets by script, and Space on a checkbox, 
   expect(await page.locator('#c-space').isChecked()).toBe(false);
 });
 
+// The results summary (#23), read from the overlay's shadow root: its lines, or null when hidden.
+const summaryLines = (page) => page.evaluate(() => {
+  const el = document.querySelector('[data-over-the-shoulder]')?.shadowRoot?.querySelector('.summary');
+  return el && el.style.display === 'block' ? [...el.children].map((line) => line.textContent) : null;
+});
+
+test("a summary lists the run's findings in order, one line per step, and says what it drew (#23)", async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: saves' });
+  await send(page, { step: 2, selector: '#far' });
+  await send(page, { step: 3, selector: '#nothing-here', label: 'Fail: no total' });
+  await send(page, { step: 1, selector: '#save', label: 'Pass: saves twice' });
+  await send(page, { label: 'Note: slow load' });
+  await send(page, { summary: true });
+  // Step 1 sent again with a new finding keeps its place; a finding with no step gets a bullet.
+  expect(await summaryLines(page)).toEqual(['1Pass: saves twice', '3Fail: no total', '•Note: slow load']);
+  expect(await ots(page, 'last')).toMatchObject({ action: 'summary', on: 'summary', findings: 3 });
+  const box = await page.evaluate(() => {
+    const r = document.querySelector('[data-over-the-shoulder]').shadowRoot.querySelector('.summary').getBoundingClientRect();
+    return { left: r.left, bottom: innerHeight - r.bottom };
+  });
+  expect(box.left).toBeLessThan(40);
+  expect(box.bottom).toBeLessThan(40);
+});
+
+test('the summary makes way for the next action and step, and clear forgets the findings', async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: saves' });
+  await send(page, { summary: true });
+  expect(await summaryLines(page)).toEqual(['1Pass: saves']);
+  await page.click('#far');
+  expect(await summaryLines(page)).toBeNull();
+  await send(page, { summary: true });
+  await send(page, { step: 2 });
+  expect(await summaryLines(page)).toBeNull();
+  await send(page, { clear: true });
+  expect(await ots(page, 'last')).toMatchObject({ action: 'clear', on: 'summary', findings: 0 });
+  await send(page, { summary: true });
+  expect(await summaryLines(page)).toEqual(['No findings on this page yet']);
+  await send(page, { clear: true });
+  expect(await summaryLines(page)).toBeNull();
+});
+
+test('a summary sent with a step includes that step, on its element or in the toast', async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: one' });
+  await send(page, { step: 2, selector: '#far', label: 'Fail: two', summary: true });
+  expect(await summaryLines(page)).toEqual(['1Pass: one', '2Fail: two']);
+  expect(await ots(page, 'last')).toMatchObject({ step: '2', on: 'button "Far button"' });
+  await send(page, { step: 3, selector: '#nothing-here', label: 'Fail: three', summary: true });
+  expect(await summaryLines(page)).toEqual(['1Pass: one', '2Fail: two', '3Fail: three']);
+  // The summary and the corner toast never show together.
+  expect((await overlay(page)).toast).toBeNull();
+});
+
+test('a long summary keeps the newest findings in view and counts the ones that do not fit', async ({ page }) => {
+  for (let i = 1; i <= 35; i++) {
+    await send(page, { step: i, selector: '#save', label: `Finding ${i} ${'detail '.repeat(25)}${'x'.repeat(150)}` });
+  }
+  await send(page, { summary: true });
+  const box = await page.evaluate(() => {
+    const el = document.querySelector('[data-over-the-shoulder]').shadowRoot.querySelector('.summary');
+    const r = el.getBoundingClientRect();
+    const last = el.lastElementChild.getBoundingClientRect();
+    return { first: el.firstElementChild.textContent, last: el.lastElementChild.textContent.slice(0, 12),
+      lastInside: last.bottom <= r.bottom + 1, fits: el.scrollHeight <= el.clientHeight + 1,
+      wide: el.scrollWidth <= el.clientWidth + 1, bottom: innerHeight - r.bottom };
+  });
+  expect(box.first).toMatch(/^…\d+ earlier$/);
+  expect(box.last).toBe('35Finding 35');
+  expect(box.lastInside).toBe(true);
+  expect(box.fits).toBe(true);
+  expect(box.wide).toBe(true);
+  expect(box.bottom).toBeLessThan(40);
+});
+
+test('the summary shows findings as text, never markup, and goes on navigation', async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: '<img src=x onerror="window.hacked=1">Pass' });
+  await send(page, { summary: true });
+  expect(await summaryLines(page)).toEqual(['1<img src=x onerror="window.hacked=1">Pass']);
+  expect(await page.evaluate(() => window.hacked)).toBeUndefined();
+  await page.evaluate(() => history.pushState({}, '', '/next'));
+  await expect.poll(() => summaryLines(page)).toBeNull();
+});
+
 test('two fields with the same name, typed one after the other, are two entries', async ({ page }) => {
   await page.locator('#qty1').click();
   await page.keyboard.type('1');

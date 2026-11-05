@@ -99,7 +99,8 @@ pass through it, but it hides the page's own button there (often Save) from view
 say so if a screenshot of that corner matters. A new step with nothing lit since the last one also
 goes to the toast; the same step sent again keeps its target. `log: true` writes every entry the overlay
 recorded on this page (hovers, clicks, typing, steps; the newest 200) to `dataset.log` as JSON. Entries
-name elements by role and visible name only, never what was typed.
+name elements by role and visible name only, never what was typed. `summary: true` lists the findings in
+one place (see section 6); `clear: true` forgets them.
 
 Use `label` only for findings (a wrong figure, a confusing word), not to describe every step; the chat
 already does that. A step with no `selector` lands on whatever was lit since the last step; to put it in
@@ -172,4 +173,11 @@ Always in this shape, in plain words:
   drawn as a toast, so it cannot cite an element; say so.
 - **Overlay:** from the log, not from memory: which steps were drawn on their element, which went to the
   toast, and the extension version.
+- **Summary screenshot** (QA, or any run with findings): after the last step, send `{ summary: true }` on
+  its own, read `dataset.last` in the same call (`{ action: 'summary', findings: n }`), take one screenshot
+  of the list in the bottom-left corner, and cite it beside the per-step screenshots. It lists each step's
+  latest `label` since the page loaded (a single-page app's route changes keep them, a page load starts
+  empty), so in a run across page loads, take one before each load; send `{ clear: true }` first when a new
+  run starts on the same page. If `dataset.last` is not a summary, the extension is older than this skill
+  expects: skip it and say so under Not checked.
 - **Not checked:** anything skipped, and why.
