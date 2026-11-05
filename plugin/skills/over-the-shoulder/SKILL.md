@@ -47,29 +47,40 @@ This skill is written for extension version 0.2.2.
   window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 4, selector: '#save-invoice', say: 'Now I save the invoice. Watch the total.' }) }))
   ```
   Name the target with `selector`: an id, `name` or `aria-label` you saw in `read_page`, such as
-  `'[aria-label="Total"]'`. Do not pass your hover or click coordinates as `at`: browser tools scale them
-  from screenshot pixels, so they do not match the page's own (see `references/tools.md`). Without a
+  `'[aria-label="Total"]'`. If the target has none (an option in a search list), build one from the page's
+  structure, such as `'#product-list > li:nth-child(5)'`, and check that
+  `document.querySelectorAll(selector).length` is 1 in the same call. Do not pass your hover or click
+  coordinates as `at`: browser tools scale them from screenshot pixels, so they do not match the page's
+  own (see `references/tools.md`). Without a
   `selector`, a step after a short hover hop could land on the previous step's element; the overlay then
   shows it in the corner toast rather than guess.
 - **Read back** what the step drew, in the same JavaScript call that sends it:
   `JSON.parse(document.querySelector('[data-over-the-shoulder]').dataset.last || 'null')` gives the
   entry number `n`, the `step` and `on` (the element, such as `button "Save"`, or `toast`). Check that
-  `step` is the one you sent (it comes back as text: `4` reads `'4'`); nothing there means the event drew nothing. If `on` is not the element you
-  meant, say so before acting. Keep each answer: the numbers start again at 1 after a page load, so cite
-  an entry as page and number ("/invoices #4").
+  `step` is the one you sent (it comes back as text: `4` reads `'4'`); nothing there means the event drew
+  nothing. If `on` is not the element you meant, say so before acting. `on` names the element the way the
+  browser does (a number field is `spinbutton`), which can differ from the names `find` gives; compare it
+  with the page's HTML, not with `find`. A field with no label or placeholder is logged by its role alone,
+  so two of them (a quantity in each cart row) read the same: your step's `selector` is what tells them
+  apart, so cite it in the report. Keep each answer: the numbers start again at 1 after a page load, so
+  cite an entry as page and number ("/invoices #4").
 - **Pause** 1 to 2 seconds so the developer sees the spotlight (the wait action in `references/tools.md`).
 - **Act** on the same target with the browser's own input: click or type on the same ref or coordinates.
   Never click or type through page JavaScript; the overlay only sees real input, and so should the test.
 - **Check the click landed:** after every click, send `{ log: true }` with no step and read the newest
   click entry in
-  `JSON.parse(document.querySelector('[data-over-the-shoulder]').dataset.log || '[]').slice(-5)`. If its `on` is not the element you meant, or there is no new click, say so
-  and take a screenshot before anything else: the page can move under a click (the developer scrolling, a
+  `JSON.parse(document.querySelector('[data-over-the-shoulder]').dataset.log || '[]').slice(-5)`.
+  For a click that focuses a field, type first (next bullet), then check: the click entry
+  sits just before the typing entry. One action can make several entries: a triple-click logs three
+  clicks. If its `on` is not the element you meant, or there is no new click, say so and take a
+  screenshot before anything else: the page can move under a click (the developer scrolling, a
   list still loading), and some real clicks are not logged (a target larger than half the page, a click
   where the developer's own pointer rests). Do it again only if the screenshot shows it did not happen,
   and never repeat a click that saves, submits, sends or deletes: ask the developer. Ask them not to
   scroll while you click.
-- **Type straight after the click** that focused the field. The overlay draws typing as yours when your
-  click was the last pointer action, so a pause lets the developer's own typing be drawn as yours.
+- **Type straight after the click** that focused the field, and check the click afterwards. The overlay
+  draws typing as yours when your click was the last pointer action, so a pause (even to read the log)
+  lets the developer's own typing be drawn as yours.
 - **After:** read the page or take a screenshot, then one line: what happened. Wait for the page to settle
   after a navigation or a save.
 - One action per tool call. No batching while the developer is watching.
@@ -78,11 +89,14 @@ This skill is written for extension version 0.2.2.
 `detail` must be a JSON string (the page and the extension run in separate JavaScript worlds). Fields:
 `step` (number or short text, shown as a badge), `label` (a finding, up to 200 characters, shown beside
 the target until you act on another element, send a step for another target, the element is removed or
-replaced by a different-looking one, the page navigates or 60 seconds pass; only one shows at a time, so take each result's screenshot while it
-shows, and send a `label` with each step on the same element, or the previous finding stays), `say` (up to 300 characters, spoken only if the developer switched voice
-on in the popup), `selector` (the step's own target in the top page; one that is not found sends the step
-to the toast; `at: { x, y }` in the page's CSS pixels also works, for tools that use those). With nothing
-lit, the step and label show as a toast in the corner. A new step with nothing lit since the last one also
+replaced by a different-looking one, the page navigates or 60 seconds pass; only one shows at a time, so
+take each result's screenshot while it shows, and send a `label` with each step on the same element, or
+the previous finding stays), `say` (up to 300 characters, spoken only if the developer switched voice on
+in the popup), `selector` (the step's own target in the top page; one that is not found sends the step to
+the toast; `at: { x, y }` in the page's CSS pixels also works, for tools that use those). With nothing
+lit, the step and label show as a toast in the bottom-right corner, for 4 seconds (8 with a label). Clicks
+pass through it, but it hides the page's own button there (often Save) from view and from screenshots;
+say so if a screenshot of that corner matters. A new step with nothing lit since the last one also
 goes to the toast; the same step sent again keeps its target. `log: true` writes every entry the overlay
 recorded on this page (hovers, clicks, typing, steps; the newest 200) to `dataset.log` as JSON. Entries
 name elements by role and visible name only, never what was typed.
