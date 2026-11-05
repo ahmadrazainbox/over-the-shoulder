@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 (2026-11-06)
 
 - Inputs, selects and links are logged with the role the browser gives them (#22), per HTML-AAM §3.5 and
   Chrome: a number field is a `spinbutton` (was `textbox`), a search field a `searchbox`, a text-like or
