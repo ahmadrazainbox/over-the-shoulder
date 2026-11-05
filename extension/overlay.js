@@ -137,6 +137,11 @@
   };
 
   let target = null;
+  // The lit element's role and name, to tell a re-rendered copy of it from a different element.
+  let targetIs = '';
+  // Set when the lit element was replaced by a different-looking one: the outline then sits on a stranger,
+  // which a step without its own target must not be drawn on. Cleared when something is lit.
+  let stranger = false;
   // How many times something has been lit, so a step can tell whether anything was lit since the last one.
   let lights = 0;
   let at = { x: 0, y: 0 };
@@ -148,10 +153,16 @@
 
   // Follows the element every frame while lit, so it stays on it when the page scrolls, writing only when
   // the box has moved. If a framework replaces the element, the one now under the same spot takes over.
+  // The step badge and finding go with it only if it looks like the same control (same role and name as
+  // when it was last lit or given a step), so a "Pass" is not shown on a different-looking element that
+  // moved into its place. Two identical controls (a "Delete" button in each row) cannot be told apart.
   const draw = () => {
     if (target && !target.isConnected) {
       const replacement = pick(deepAt(at.x, at.y));
       if (!replacement) { end(); return; }
+      const is = describe(replacement);
+      if (is !== targetIs) { hide(badge); hide(label); stranger = true; }
+      targetIs = is;
       target = replacement;
       last = '';
     }
@@ -275,9 +286,12 @@
   const light = (el, x, y, { quiet = false, action = '', trusted = true, by = 'agent' } = {}) => {
     const chosen = pick(el);
     if (!chosen) { return; }
-    const entry = action ? record({ action, on: describe(chosen), trusted, by }, chosen) : null;
+    const is = describe(chosen);
+    const entry = action ? record({ action, on: is, trusted, by }, chosen) : null;
     const same = chosen === target;
     if (!same) { raise(); hide(badge); hide(label); }
+    targetIs = is;
+    stranger = false;
     target = chosen;
     at = { x, y };
     last = '';
@@ -490,6 +504,11 @@
       // A new step with nothing lit since the last one: the lit element belongs to that step.
       end();
     }
+    // The lit element may have been replaced by a different-looking one, just now or frames ago. A step
+    // that does not name its own target is then not drawn on, or reported for, the element that took its
+    // place: it goes to the toast instead.
+    if (target && !target.isConnected) { draw(); }
+    if (target && stranger && detail.selector === undefined && detail.at === undefined) { end(); }
     if (!target) {
       toast.replaceChildren();
       if (step) { toast.append(Object.assign(document.createElement('b'), { textContent: step })); }
@@ -512,6 +531,8 @@
     }
     last = '';
     draw();
-    answer(record({ action: 'step', step, on: describe(target), label: Boolean(text) }));
+    // What this step was drawn on, as it reads now (its text may have changed since it was lit).
+    targetIs = describe(target);
+    answer(record({ action: 'step', step, on: targetIs, label: Boolean(text) }));
   });
 })();
