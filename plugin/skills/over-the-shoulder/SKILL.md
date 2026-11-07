@@ -37,6 +37,8 @@ This skill is written for extension version 0.2.2.
    page must be reloaded too, or it keeps the old one. Nothing there, although the toast showed: the extension is older than 0.2.0 and
    keeps no log. Say so, and go on without it: steps get no `data-last`, each Pass cites a screenshot only,
    and the report says "Overlay log: not available (extension older than 0.2.0)".
+5. In every case, once the version is read, send `{ clear: true }`, so the overlay check's label is not
+   listed in the summary at the end.
 
 ## 2. Every step
 
@@ -103,8 +105,10 @@ name elements by role and visible name only, never what was typed. `summary: tru
 one place (see section 6); `clear: true` forgets them.
 
 Use `label` only for findings (a wrong figure, a confusing word), not to describe every step; the chat
-already does that. A step with no `selector` lands on whatever was lit since the last step; to put it in
-the corner toast instead, give it a `selector` that matches nothing.
+already does that. Never put a password, a token, personal data or anything from a real customer's
+records in a `label`: the overlay keeps labels for the summary, where the page's scripts can read them. A
+step with no `selector` lands on whatever was lit since the last step; to put it in the corner toast
+instead, give it a `selector` that matches nothing.
 
 ## 3. Modes
 
@@ -179,5 +183,7 @@ Always in this shape, in plain words:
   latest `label` since the page loaded (a single-page app's route changes keep them, a page load starts
   empty), so in a run across page loads, take one before each load; send `{ clear: true }` first when a new
   run starts on the same page. If `dataset.last` is not a summary, the extension is older than this skill
-  expects: skip it and say so under Not checked.
+  expects: skip it and say so under Not checked. The list goes at the next hover or action, including the
+  developer's mouse coming back into the window, and at a URL change the page makes itself: if the
+  screenshot shows no list, send `{ summary: true }` again once and take another.
 - **Not checked:** anything skipped, and why.

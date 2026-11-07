@@ -930,6 +930,35 @@ test('a long summary keeps the newest findings in view and counts the ones that 
   expect(box.bottom).toBeLessThan(40);
 });
 
+test('the summary counts findings past the 50 kept, and a step sent again counts as new', async ({ page }) => {
+  // 61 one-line findings: 11 are past the 50 kept, and the rest no longer all fit either.
+  for (let i = 1; i <= 61; i++) { await send(page, { step: i, selector: '#save', label: `F${i}` }); }
+  await send(page, { summary: true });
+  expect(await ots(page, 'last')).toMatchObject({ action: 'summary', findings: 50 });
+  const lines = await summaryLines(page);
+  const shown = lines.length - 1;
+  expect(lines[0]).toBe(`…${61 - shown} earlier`);
+  expect(lines.at(-1)).toBe('61F61');
+  // Step 12 (the first one kept) sent again: it keeps its place in the list, but it is now the newest,
+  // so it still shows, and the oldest one shown goes in its stead.
+  await send(page, { step: 12, selector: '#save', label: 'F12 again' });
+  await send(page, { summary: true });
+  const again = await summaryLines(page);
+  expect(again).toContain('12F12 again');
+  expect(again).toContain('61F61');
+  expect(again[0]).toBe(`…${61 - (again.length - 1)} earlier`);
+  // Step 1, dropped past the 50, sent again: back in the list, so no longer counted as earlier.
+  await send(page, { step: 1, selector: '#save', label: 'F1 back' });
+  await send(page, { summary: true });
+  const back = await summaryLines(page);
+  expect(back.at(-1)).toBe('1F1 back');
+  expect(back[0]).toBe(`…${61 - (back.length - 1)} earlier`);
+  await send(page, { clear: true });
+  await send(page, { step: 1, selector: '#save', label: 'F1' });
+  await send(page, { summary: true });
+  expect(await summaryLines(page)).toEqual(['1F1']);
+});
+
 test('the summary shows findings as text, never markup, and goes on navigation', async ({ page }) => {
   await send(page, { step: 1, selector: '#save', label: '<img src=x onerror="window.hacked=1">Pass' });
   await send(page, { summary: true });

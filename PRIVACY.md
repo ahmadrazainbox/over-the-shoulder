@@ -14,8 +14,9 @@ visit or what you do on them, beyond the short in-page list described below.
   also change it, so on a page you do not trust it is not evidence. It is gone when the page is closed or
   reloaded, and holds at most 200 entries.
 - It also keeps the findings the agent sent with its steps (its own `label` text, newest 50), so it can
-  show them as one list when the agent asks for a summary. They are the agent's words, which can quote
-  what the page shows (a total, a name), never a field's value or what was typed. Like the log, they are
+  show them as one list when the agent asks for a summary. They are the agent's own words, which the
+  overlay cannot check: they can quote what the page shows (a total, a name), and the skill tells the
+  agent never to put a password, a token or personal data in them. Like the log, they are
   shown in the overlay's own element in the page, so the page's own scripts can read them, and are gone
   when the page is closed or reloaded.
 - It has no server, no analytics and makes no network requests.
