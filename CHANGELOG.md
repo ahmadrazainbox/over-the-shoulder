@@ -11,14 +11,21 @@
   script (an agent's form tool), toggled with Space or chosen with the arrow keys still counts as typing.
   Rows a real click on a "Select all" toggles by script, while the page handles that click, are the
   click's too; the same select-all run by a script still counts as typing.
-- A run's results together (#23): `{ summary: true }` shows the findings the agent sent with a `label`
-  as one list in the bottom-left corner, one line per step with its latest finding, for one screenshot at
+- A run's results together (#23): `{ summary: true }` shows the findings the agent sent with a `label` as
+  one list in the bottom-left corner, one line per step with its latest finding, for one screenshot at
   the end; the newest always show and older ones that do not fit are counted. It goes at the next action
-  or step or a navigation, and `{ clear: true }` forgets the findings. The overlay keeps the agent's own
-  label text for this page load (newest 50; it can quote the page, and the skill keeps passwords and
-  personal data out of it), shown in its own element; PRIVACY.md says so. A finding sent without a step,
-  beside a step's badge, counts as that step's. The skill takes the summary screenshot at the end of a QA
-  run.
+  or step or a navigation, and `{ clear: true }` forgets the findings and takes the last step's badge and
+  finding away. The overlay keeps the agent's own label text for this page load (newest 50; it can quote
+  the page, and the skill keeps passwords and personal data out of it), shown in its own element;
+  PRIVACY.md says so. A finding sent without a step, beside a step's badge, counts as that step's. The
+  skill takes the summary screenshot at the end of a QA run.
+- Skill and tools.md, from a fresh agent's QA run on a point-of-sale page: the overlay check sends a
+  `selector` that matches nothing, so it always goes to the toast; every step's `selector` is checked to
+  match one element before acting, whatever its source; a QA item that cannot be run is Not checked, and
+  the agent asks for test data first; a wrong finding is corrected by sending the same step again; voice's
+  end-of-point sentence goes with the next step; a hover on the spot just clicked adds no log entry; keys
+  in a field make one typing entry; numbered ids can change between loads; `javascript_tool` withholds a
+  result with a URL query string.
 
 ## 0.2.2 (2026-11-06)
 

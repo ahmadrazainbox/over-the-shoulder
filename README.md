@@ -93,8 +93,8 @@ The overlay answers on its host element, `document.querySelector('[data-over-the
 `dataset.last` is what the latest step drew (`on`: the element, or `toast`; after `summary` or `clear` on
 their own, `on` is `summary` with the number of `findings`), `dataset.log` the log as JSON
 (after `log: true`), `dataset.version` the extension's version. The skill reads these to check its report.
-On each page load the host is added only at the first step event with a `step`, `label` or `log`, or the
-first hover, click or typing it draws, so before that it is not there even when the overlay runs. To check
+On each page load the host is added only at the first step event with a `step`, `label`, `log`, `summary`
+or `clear`, or the first hover, click or typing it draws, so before that it is not there even when the overlay runs. To check
 that it runs, send a step 0 event, as the skill does, and look for the toast.
 
 One step badge and one finding label show at a time. They follow their element as the page scrolls, and
