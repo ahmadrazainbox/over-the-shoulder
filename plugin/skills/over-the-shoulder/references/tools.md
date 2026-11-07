@@ -24,6 +24,10 @@ Notes for Claude in Chrome:
 - Keys inside a field (`cmd+a`, Backspace, typing) are logged as typing on that field, and a run of
   typing in one field is a single entry, so `cmd+a` and the typing after it make one entry (a step event
   sent between them splits it in two).
+- A select chosen with the mouse logs the click and then a typing entry on it (a value was entered); one
+  chosen by `type` or a form tool logs typing only.
+- A click on a "Select all" whose rows the page ticks while handling that click logs the click only; rows
+  it ticks later (in a timer, after a request) log as typing, like a form tool's.
 - `key` presses outside a field (Escape to close a dialog, Enter on a focused button) are not drawn; say
   in chat which key you press and why.
 - `javascript_tool` withholds a result that contains a URL with a query string; read such values with

@@ -105,6 +105,9 @@ seconds after the element was lit. A step on the same element without a `label` 
 beside its new badge, and a `label` without a `step` keeps the previous badge. So a screenshot usually
 shows one step's result; to show the run's results together, send `summary: true` at the end.
 
+A select chosen with the mouse logs a click and then typing (a value was entered). Rows a "Select all"
+ticks while its click is handled are part of that click; rows ticked later, in a timer, log as typing.
+
 Any script on a page where the overlay runs can send this event, not only your agent, and could also draw
 look-alike marks of its own. So treat the overlay as a guide to follow the agent, not as proof of what it
 did; the agent's chat and its final report are the record. Enable the extension only on sites you trust.

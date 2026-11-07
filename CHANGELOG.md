@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- A "Select all" inside a shadow root whose `change` handler ticks the rows is now the click's, like one
+  in the page (#32): `change` does not leave a shadow root, so the overlay listens in each open shadow
+  root a real press passes through. Rows ticked later, in a timer, still log as typing; README and
+  tools.md say so.
+- A summary on screen is fitted again when the window is resized, so its newest lines stay in view and
+  the rest are counted (#34). A page Chrome brings back with Back or Forward keeps its findings; the
+  skill says so.
+- A select chosen with the mouse stays a click and then typing (#33): headless Chromium cannot choose an
+  option with the mouse to test a rule, and a time window would hide a keyboard choice made just after
+  the click. README and tools.md say so.
+- Tests: every run keeps its JSON report in `test-results-last/` (one file per run, not cleared by the next
+  run), so a failure that does not come back is still named; a failing test keeps its trace in
+  `test-results/` until the next run (#35).
+
 ## 0.2.3 (2026-11-07)
 
 - Skill and tools.md, from fresh agents' QA runs (#24): type straight after the click that focuses a

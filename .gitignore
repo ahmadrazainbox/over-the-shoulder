@@ -1,5 +1,6 @@
 node_modules/
 test-results/
+test-results-last/
 playwright-report/
 .DS_Store
 *.zip

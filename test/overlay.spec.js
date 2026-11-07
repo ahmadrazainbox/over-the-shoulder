@@ -788,6 +788,31 @@ test('rows a real click on "Select all" toggles by script are that click, not ty
   expect(await page.locator('.c-row:checked').count()).toBe(0);
 });
 
+test('a select-all inside a shadow root, with a change handler, is the click; by script it is typing (#32)', async ({ page }) => {
+  await page.evaluate(() => {
+    const host = document.createElement('div');
+    host.id = 'shadow-host';
+    document.body.prepend(host);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = `<label><input id="sh-all" type="checkbox"> Shadow all</label>
+      <label><input class="sh-row" type="checkbox"> Shadow row one</label>
+      <label><input class="sh-row" type="checkbox"> Shadow row two</label>`;
+    root.querySelector('#sh-all').addEventListener('change', (e) => {
+      root.querySelectorAll('.sh-row').forEach((row) => { if (row.checked !== e.target.checked) { row.click(); } });
+    });
+  });
+  await page.locator('#sh-all').click();
+  await page.waitForTimeout(1100);
+  const byClick = (await drawnLog(page)).filter((entry) => ['click', 'type'].includes(entry.action)).map((entry) => `${entry.action} ${entry.on}`);
+  expect(byClick).toEqual(['click checkbox "Shadow all"']);
+  expect(await page.locator('.sh-row:checked').count()).toBe(2);
+  await page.evaluate(() => document.querySelector('#shadow-host').shadowRoot.querySelector('#sh-all').click());
+  await page.waitForTimeout(200);
+  const typedOn = (await drawnLog(page)).filter((entry) => entry.action === 'type').map((entry) => entry.on);
+  expect(typedOn).toContain('checkbox "Shadow row one"');
+  expect(await page.locator('.sh-row:checked').count()).toBe(0);
+});
+
 test("a page that stops a real click's events, or announces rows itself, still gets the next script click logged", async ({ page }) => {
   await page.evaluate(() => {
     document.body.insertAdjacentHTML('afterbegin', `<section>
@@ -951,6 +976,21 @@ test('a long summary keeps the newest findings in view and counts the ones that 
   expect(box.bottom).toBeLessThan(40);
 });
 
+test('a summary on screen is fitted again when the window gets smaller (#34)', async ({ page }) => {
+  for (let i = 1; i <= 30; i++) { await send(page, { step: i, selector: '#nothing-here', label: `Finding ${i}` }); }
+  await send(page, { summary: true });
+  expect((await summaryLines(page))[0]).toBe('1Finding 1');
+  await page.setViewportSize({ width: 1000, height: 300 });
+  await expect.poll(async () => (await summaryLines(page))[0]).toMatch(/^…\d+ earlier$/);
+  const box = await page.evaluate(() => {
+    const el = document.querySelector('[data-over-the-shoulder]').shadowRoot.querySelector('.summary');
+    return { last: el.lastElementChild.textContent, fits: el.scrollHeight <= el.clientHeight + 1 };
+  });
+  expect(box).toEqual({ last: '30Finding 30', fits: true });
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await expect.poll(async () => (await summaryLines(page))[0]).toBe('1Finding 1');
+});
+
 test('the summary counts findings past the 50 kept, and a step sent again counts as new', async ({ page }) => {
   // 61 one-line findings: 11 are past the 50 kept, and the rest no longer all fit either.
   for (let i = 1; i <= 61; i++) { await send(page, { step: i, selector: '#save', label: `F${i}` }); }
@@ -1065,6 +1105,20 @@ test('after the extension is reloaded, the old overlay removes itself instead of
     return page.evaluate(() => window.oldHost.isConnected);
   }, { timeout: 10000 }).toBe(false);
   expect(await page.locator('[data-over-the-shoulder]').count()).toBeLessThanOrEqual(1);
+});
+
+test('a summary left by a reloaded extension does not come back on resize', async ({ page, worker }) => {
+  await send(page, { step: 1, selector: '#nothing-here', label: 'A finding' });
+  await send(page, { summary: true });
+  await page.evaluate(() => { window.oldHost = document.querySelector('[data-over-the-shoulder]'); });
+  await worker.evaluate(() => chrome.runtime.reload()).catch(() => { /* the worker goes away */ });
+  await expect.poll(async () => {
+    await send(page, { step: 2 });
+    return page.evaluate(() => window.oldHost.isConnected);
+  }, { timeout: 10000 }).toBe(false);
+  await page.setViewportSize({ width: 800, height: 700 });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.oldHost.isConnected)).toBe(false);
 });
 
 test("the page's own CSS cannot hide the overlay", async ({ page }) => {
