@@ -868,9 +868,10 @@ test("a summary lists the run's findings in order, one line per step, and says w
   await send(page, { step: 2, selector: '#far' });
   await send(page, { step: 3, selector: '#nothing-here', label: 'Fail: no total' });
   await send(page, { step: 1, selector: '#save', label: 'Pass: saves twice' });
-  await send(page, { label: 'Note: slow load' });
+  await send(page, { label: 'Note: slow load', selector: '#nothing-here' });
   await send(page, { summary: true });
-  // Step 1 sent again with a new finding keeps its place; a finding with no step gets a bullet.
+  // Step 1 sent again with a new finding keeps its place; a finding with no step, and no badge beside
+  // it, gets a bullet.
   expect(await summaryLines(page)).toEqual(['1Pass: saves twice', '3Fail: no total', '•Note: slow load']);
   expect(await ots(page, 'last')).toMatchObject({ action: 'summary', on: 'summary', findings: 3 });
   const box = await page.evaluate(() => {
@@ -879,6 +880,14 @@ test("a summary lists the run's findings in order, one line per step, and says w
   });
   expect(box.left).toBeLessThan(40);
   expect(box.bottom).toBeLessThan(40);
+});
+
+test("a finding sent without a step, beside a step's badge, is that step's finding in the summary", async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: saves' });
+  await send(page, { label: 'Fail: saves twice' });
+  expect((await overlay(page)).label?.text).toBe('Fail: saves twice');
+  await send(page, { summary: true });
+  expect(await summaryLines(page)).toEqual(['1Fail: saves twice']);
 });
 
 test('the summary makes way for the next action and step, and clear forgets the findings', async ({ page }) => {

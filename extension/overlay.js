@@ -627,7 +627,8 @@
     draw();
     // What this step was drawn on, as it reads now (its text may have changed since it was lit).
     targetIs = describe(target);
-    keep(step, text);
+    // A finding with no step of its own sits beside the badge still shown, so it is that step's finding.
+    keep(step || (badge.style.display === 'block' ? badge.textContent : ''), text);
     answer(record({ action: 'step', step, on: targetIs, label: Boolean(text) }));
     if (detail.summary) { showSummary(); }
   });

@@ -79,14 +79,15 @@ window.dispatchEvent(new CustomEvent('over-the-shoulder', {
 ```
 
 `detail` must be a JSON string. All fields are optional: `step` (badge), `label` (finding, up to 200
-characters), `say` (spoken if voice is on, up to 300 characters), `selector` (the step's own target, a CSS
-selector in the top page; not found sends the step to the corner toast), `at` (`{ x, y }` in the page's CSS
-pixels, instead of `selector`), `log` (`true` writes the page's log of what was drawn), `summary` (`true`
-shows the findings sent with a `label` as one list in the bottom-left corner, one line per step with its
-latest finding, for one screenshot at the end of a run; the newest always show, and older ones that do
-not fit are counted; it goes at the next action or step, or a navigation) and `clear` (`true` forgets
-those findings, to start a new run). The findings are kept for the page load (newest 50); a single-page
-app's route changes keep them.
+characters), `say` (spoken if voice is on, up to 300 characters), `selector` (the step's own target, a
+CSS selector in the top page; not found sends the step to the corner toast), `at` (`{ x, y }` in the
+page's CSS pixels, instead of `selector`), `log` (`true` writes the page's log of what was drawn),
+`summary` (`true` shows the findings sent with a `label` as one list in the bottom-left corner, one line
+per step with its latest finding (a `label` sent without a `step` beside a step's badge counts as that
+step's), for one screenshot at the end of a run; the newest always show, and older ones that do not fit
+are counted; it goes at the next action or step, or a navigation) and `clear` (`true` forgets those
+findings, to start a new run). The findings are kept for the page load (newest 50); a single-page app's
+route changes keep them.
 
 The overlay answers on its host element, `document.querySelector('[data-over-the-shoulder]')`:
 `dataset.last` is what the latest step drew (`on`: the element, or `toast`; after `summary` or `clear` on

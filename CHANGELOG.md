@@ -11,12 +11,14 @@
   script (an agent's form tool), toggled with Space or chosen with the arrow keys still counts as typing.
   Rows a real click on a "Select all" toggles by script, while the page handles that click, are the
   click's too; the same select-all run by a script still counts as typing.
-- A run's results together (#23): `{ summary: true }` shows the findings the agent sent with a `label` as
-  one list in the bottom-left corner, one line per step with its latest finding, for one screenshot at the
-  end; the newest always show and older ones that do not fit are counted. It goes at the next action or
-  step or a navigation, and `{ clear: true }` forgets the findings. The overlay keeps the agent's own
-  label text for this page load (newest 50; it can quote the page, never a field's value), shown in its
-  own element; PRIVACY.md says so. The skill takes the summary screenshot at the end of a QA run.
+- A run's results together (#23): `{ summary: true }` shows the findings the agent sent with a `label`
+  as one list in the bottom-left corner, one line per step with its latest finding, for one screenshot at
+  the end; the newest always show and older ones that do not fit are counted. It goes at the next action
+  or step or a navigation, and `{ clear: true }` forgets the findings. The overlay keeps the agent's own
+  label text for this page load (newest 50; it can quote the page, and the skill keeps passwords and
+  personal data out of it), shown in its own element; PRIVACY.md says so. A finding sent without a step,
+  beside a step's badge, counts as that step's. The skill takes the summary screenshot at the end of a QA
+  run.
 
 ## 0.2.2 (2026-11-06)
 
