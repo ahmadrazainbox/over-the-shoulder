@@ -26,6 +26,8 @@ Notes for Claude in Chrome:
   sent between them splits it in two).
 - `key` presses outside a field (Escape to close a dialog, Enter on a focused button) are not drawn; say
   in chat which key you press and why.
+- `javascript_tool` withholds a result that contains a URL with a query string; read such values with
+  the query part cut off (`url.split('?')[0]`), or count them instead.
 - `scroll` is not drawn and does not light anything; hover the next target after scrolling to it.
 - The developer may move their own mouse while you act. Your clicks, and the typing after them, still
   show (a click straight after a jump to its target is yours); a hover while their mouse is moving may not

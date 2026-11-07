@@ -573,7 +573,9 @@
     };
     // `clear` forgets the findings kept for the summary (a new run); `summary` shows them in one list, after
     // this event's own step and finding, if it has them.
-    if (detail.clear) { results.length = 0; forgot = 0; forgotSteps.clear(); hide(summary); }
+    // A new run: the last run's badge and finding go too, so a finding sent next without a step is not
+    // filed under the old step's number.
+    if (detail.clear) { results.length = 0; forgot = 0; forgotSteps.clear(); [summary, badge, label].forEach(hide); }
     if (!step && !text && (detail.summary || detail.clear)) {
       if (detail.summary) { showSummary(); } else { raise(); }
       answer(record({ action: detail.summary ? 'summary' : 'clear', on: 'summary', findings: results.length }));

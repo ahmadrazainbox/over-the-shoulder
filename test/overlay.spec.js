@@ -890,6 +890,18 @@ test("a finding sent without a step, beside a step's badge, is that step's findi
   expect(await summaryLines(page)).toEqual(['1Fail: saves twice']);
 });
 
+test("clear takes the last run's badge and finding away, so the next finding without a step is not filed under it", async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: saves' });
+  expect((await overlay(page)).label?.text).toBe('Pass: saves');
+  await send(page, { clear: true });
+  const state = await overlay(page);
+  expect(state.badge).toBeNull();
+  expect(state.label).toBeNull();
+  await send(page, { label: 'Note: new run' });
+  await send(page, { summary: true });
+  expect(await summaryLines(page)).toEqual(['•Note: new run']);
+});
+
 test('the summary makes way for the next action and step, and clear forgets the findings', async ({ page }) => {
   await send(page, { step: 1, selector: '#save', label: 'Pass: saves' });
   await send(page, { summary: true });

@@ -86,8 +86,8 @@ page's CSS pixels, instead of `selector`), `log` (`true` writes the page's log o
 per step with its latest finding (a `label` sent without a `step` beside a step's badge counts as that
 step's), for one screenshot at the end of a run; the newest always show, and older ones that do not fit
 are counted; it goes at the next action or step, or a navigation) and `clear` (`true` forgets those
-findings, to start a new run). The findings are kept for the page load (newest 50); a single-page app's
-route changes keep them.
+findings, to start a new run, and takes the last step's badge and finding away). The findings are kept
+for the page load (newest 50); a single-page app's route changes keep them.
 
 The overlay answers on its host element, `document.querySelector('[data-over-the-shoulder]')`:
 `dataset.last` is what the latest step drew (`on`: the element, or `toast`; after `summary` or `clear` on
