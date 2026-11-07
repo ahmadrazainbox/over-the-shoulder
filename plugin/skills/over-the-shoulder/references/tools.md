@@ -5,10 +5,10 @@ this version; the other columns are filled in as each agent is tested.
 
 | Action | Claude in Chrome |
 |---|---|
-| Find a target | `find` or `read_page` (gives a `ref`); for a step's `selector`, an id, `name` or `aria-label` from `read_page`, or read the element's id from the page if `read_page` shows none |
+| Find a target | `find` or `read_page` (gives a `ref`); for a step's `selector`, an id, `name` or `aria-label` from `read_page`, or read the element's id from the page if `read_page` shows none; with no id either, a selector from the page's structure that matches one element |
 | Hover | `computer` with `action: "hover"` and the `ref` (or coordinates) |
 | Click | `computer` with `action: "left_click"` on the same `ref` |
-| Type | click the field, then `computer` with `action: "type"` (typing shows only after your own hover or click) |
+| Type | click the field, then `computer` with `action: "type"` (typing shows only after your own hover or click); to replace a value in a one-line field, `triple_click` it first (logged as three clicks); in a text area that selects one paragraph only, so click and press `cmd+a` (`ctrl+a` off macOS) instead |
 | Choose in a select | click it, then `type` the first letters of the option (on macOS the native list ignores arrow keys and Enter from the tool) |
 | Step event, label, voice | `javascript_tool` running the `window.dispatchEvent(...)` line, with `selector` for the target |
 | Pause | `computer` with `action: "wait"` and `duration: 1` or `2` |
@@ -32,6 +32,9 @@ Notes for Claude in Chrome:
   submit, send or delete).
 - If a hover fails because the ref went stale after the page redrew, look the element up again before
   carrying on. Refs also go stale after a navigation or reload: `find` again first.
+- `find` names elements its own way (a number field as `textbox "1"`, an option by part of its text); the
+  overlay's log uses the browser's roles (`spinbutton`). Compare the log with the page's HTML, not with
+  `find`.
 - No GIF recording unless the developer asks for one.
 - The tool may suggest `browser_batch` after single calls: ignore that while the developer is watching.
 - Tool output is cut short at about a thousand characters: read `dataset.log` in slices, e.g.

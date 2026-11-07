@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Skill and tools.md, from fresh agents' QA runs (#24): type straight after the click that focuses a
+  field, then check the click; a selector for a target with no id or label, checked to match one element;
+  a triple-click logs three clicks; the log names elements as the browser does, not as `find` does; two
+  unnamed fields are told apart by the step's selector; the corner toast can cover the page's Save button.
+
 ## 0.2.2 (2026-11-06)
 
 - Inputs, selects and links are logged with the role the browser gives them (#22), per HTML-AAM §3.5 and
