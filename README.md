@@ -27,7 +27,7 @@ captions and speed-up (2 to 2.5 times) were added in editing.*
 *Screenshot from a demo invoice app, with sample data: the extension outlines the changed total, numbers the
 step and labels what changed and where in the code.*
 
-> Status: 0.2.5, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
+> Status: 0.2.6, works with **Claude Code + Claude in Chrome**. Codex and Google Antigravity are coming soon.
 
 ## Install
 

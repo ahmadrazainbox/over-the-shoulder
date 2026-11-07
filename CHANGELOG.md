@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.2.6 (2026-11-07)
 
-- README: a short demo GIF of a real run (an agent checking a cart total in a local test copy of a point-of-sale app).
+- README: a short demo GIF of a real run (an agent checking a cart total in a local test copy of a
+  point-of-sale app).
 - The overlay is kept out of the accessibility tree (`aria-hidden`), so a screen reader does not read its
   badges and findings, and an agent reading the page's tree does not see its own labels.
 - With reduced motion turned on in the system, the outline no longer pulses or eases, and a click shows a
@@ -11,7 +12,8 @@
   [docs/step-event.md](docs/step-event.md). New SECURITY.md (private vulnerability reporting).
 - Repository: CI actions pinned to commit SHAs, Dependabot (monthly, grouped), CI keeps the JSON test
   report when a run fails, a test that the release zip holds exactly the extension, `.editorconfig`, and
-  the plugin and package metadata point to the GitHub repository.
+  the plugin and package metadata point to the GitHub repository (the plugin's homepage was armunir.com).
+  The issue chooser links to private vulnerability reporting.
 
 ## 0.2.5 (2026-11-07)
 
