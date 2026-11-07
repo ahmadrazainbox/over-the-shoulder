@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.3 (2026-11-07)
 
 - Skill and tools.md, from fresh agents' QA runs (#24): type straight after the click that focuses a
   field, then check the click; a selector for a target with no id or label, checked to match one element;
