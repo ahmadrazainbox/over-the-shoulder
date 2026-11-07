@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.5 (2026-11-07)
 
 - An overlay left behind after the extension is reloaded no longer adds listeners to shadow roots the
   developer clicks through (it already drew and logged nothing).
