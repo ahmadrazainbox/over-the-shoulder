@@ -325,6 +325,7 @@
     if (alive) { return false; }
     dead = true;
     end();
+    [toast, summary].forEach(hide);
     host.remove();
     return true;
   };
@@ -556,7 +557,7 @@
   };
   // The step last shown on a target, and the light count at the time.
   // A summary on screen is fitted again when the window changes size, so its newest lines stay in view.
-  addEventListener('resize', () => { if (shown(summary)) { showSummary(); } });
+  addEventListener('resize', () => { if (!gone() && shown(summary)) { showSummary(); } });
   let shownStep = { step: '', lights: -1 };
   let saidAt = -Infinity;
   addEventListener(EVENT, (e) => {

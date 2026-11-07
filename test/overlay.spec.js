@@ -1107,6 +1107,20 @@ test('after the extension is reloaded, the old overlay removes itself instead of
   expect(await page.locator('[data-over-the-shoulder]').count()).toBeLessThanOrEqual(1);
 });
 
+test('a summary left by a reloaded extension does not come back on resize', async ({ page, worker }) => {
+  await send(page, { step: 1, selector: '#nothing-here', label: 'A finding' });
+  await send(page, { summary: true });
+  await page.evaluate(() => { window.oldHost = document.querySelector('[data-over-the-shoulder]'); });
+  await worker.evaluate(() => chrome.runtime.reload()).catch(() => { /* the worker goes away */ });
+  await expect.poll(async () => {
+    await send(page, { step: 2 });
+    return page.evaluate(() => window.oldHost.isConnected);
+  }, { timeout: 10000 }).toBe(false);
+  await page.setViewportSize({ width: 800, height: 700 });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.oldHost.isConnected)).toBe(false);
+});
+
 test("the page's own CSS cannot hide the overlay", async ({ page }) => {
   await page.addStyleTag({ content: 'div { display: none !important; visibility: hidden !important; opacity: 0 !important; }' });
   await agentHover(page, '#save');

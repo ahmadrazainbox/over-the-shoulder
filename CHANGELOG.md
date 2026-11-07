@@ -12,8 +12,9 @@
 - A select chosen with the mouse stays a click and then typing (#33): headless Chromium cannot choose an
   option with the mouse to test a rule, and a time window would hide a keyboard choice made just after
   the click. README and tools.md say so.
-- Tests: a failing run now leaves the failing test's name in `test-results-last/results.json` and its
-  trace in `test-results/` (#35).
+- Tests: every run keeps its JSON report in `test-results-last/` (one file per run, not cleared by the next
+  run), so a failure that does not come back is still named; a failing test keeps its trace in
+  `test-results/` until the next run (#35).
 
 ## 0.2.3 (2026-11-07)
 
