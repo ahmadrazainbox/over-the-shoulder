@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- README: a short demo GIF of a real run (an agent checking a cart total in a local test copy of a point-of-sale app).
 - The overlay is kept out of the accessibility tree (`aria-hidden`), so a screen reader does not read its
   badges and findings, and an agent reading the page's tree does not see its own labels.
 - With reduced motion turned on in the system, the outline no longer pulses or eases, and a click shows a

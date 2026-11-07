@@ -16,6 +16,12 @@ part. Over the Shoulder lets your agent show you, in your own Chrome, one visibl
 
 It does not drive the browser itself. It sits on top of whatever your agent already uses.
 
+![A real run: Claude in Chrome checks a cart in a point-of-sale app (a local test copy). Over the Shoulder outlines the search, the result, the quantity and the total, numbers each step, labels two Pass findings and lists them together at the end.](docs/demo.gif)
+
+*A real run in Chrome on a local test copy of a point-of-sale app, with test data: the agent checks a
+cart total. The outlines, step badges, findings and summary are drawn by the extension; the zooms,
+captions and speed-up (2 to 2.5 times) were added in editing.*
+
 ![Over the Shoulder: the changed total on a demo invoice page, outlined in red with step badge 3 and a finding label. Works with Claude Code + Claude in Chrome; Codex and Google Antigravity coming soon.](docs/hero.png)
 
 *Screenshot from a demo invoice app, with sample data: the extension outlines the changed total, numbers the
