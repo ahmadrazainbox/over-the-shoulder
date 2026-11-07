@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.4 (2026-11-07)
 
 - A "Select all" inside a shadow root whose `change` handler ticks the rows is now the click's, like one
   in the page (#32): `change` does not leave a shadow root, so the overlay listens in each open shadow
