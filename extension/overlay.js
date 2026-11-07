@@ -43,6 +43,9 @@
   // cannot block it (constructed stylesheets and CSSOM writes are not inline style markup).
   const host = document.createElement('div');
   host.setAttribute('data-over-the-shoulder', '');
+  // Drawn for the eyes only: kept out of the accessibility tree, so a screen reader does not read the badges
+  // and findings, and an agent reading the page's tree (find, read_page) does not see its own labels.
+  host.setAttribute('aria-hidden', 'true');
   // Every rule is !important, so a page rule such as `div { display: none !important }` cannot hide it.
   host.style.cssText = ['all:initial', 'position:fixed', 'inset:0', 'width:100vw', 'height:100vh', 'margin:0',
     'padding:0', 'border:0', 'background:transparent', 'overflow:visible', 'pointer-events:none',
@@ -75,6 +78,12 @@
     .summary div { margin: 3px 0; }
     .toast b, .summary b { display: inline-block; min-width: 20px; margin-right: 6px; padding: 0 6px; border-radius: 10px;
       background: #E10600; text-align: center; }
+    /* Reduced motion: no pulse or easing, and a click shows a still ring that fades instead of growing. */
+    @media (prefers-reduced-motion: reduce) {
+      .spot { animation: none; transition: none; }
+      .ripple { animation: fade .9s linear forwards; }
+      @keyframes fade { to { opacity: 0; } }
+    }
   `;
   try {
     const sheet = new CSSStyleSheet();

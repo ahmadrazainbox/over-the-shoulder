@@ -1121,6 +1121,27 @@ test('a summary left by a reloaded extension does not come back on resize', asyn
   expect(await page.evaluate(() => window.oldHost.isConnected)).toBe(false);
 });
 
+test('the overlay is kept out of the accessibility tree', async ({ page }) => {
+  await send(page, { step: 1, selector: '#save', label: 'Pass: saves' });
+  expect(await page.locator('[data-over-the-shoulder]').getAttribute('aria-hidden')).toBe('true');
+  // Neither the badge nor the finding is in the page's accessibility tree, so an agent reading it sees the page only.
+  // The host sits on <html>, outside <body>, so the whole document is read.
+  const snapshot = await page.locator('html').ariaSnapshot();
+  expect(snapshot).not.toContain('Pass: saves');
+});
+
+test('with reduced motion, the spot does not pulse and a click ring fades without growing', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.click('#save');
+  const anim = await page.evaluate(() => {
+    const root = document.querySelector('[data-over-the-shoulder]').shadowRoot;
+    const spot = getComputedStyle(root.querySelector('.spot'));
+    const ripple = root.querySelector('.ripple');
+    return { spot: spot.animationName, spotTransition: spot.transitionDuration, ripple: ripple && getComputedStyle(ripple).animationName };
+  });
+  expect(anim).toEqual({ spot: 'none', spotTransition: '0s', ripple: 'fade' });
+});
+
 test("the page's own CSS cannot hide the overlay", async ({ page }) => {
   await page.addStyleTag({ content: 'div { display: none !important; visibility: hidden !important; opacity: 0 !important; }' });
   await agentHover(page, '#save');

@@ -4,6 +4,14 @@
   "private": true,
   "description": "See what your AI agent did, not just what it wrote.",
   "license": "MIT",
+  "homepage": "https://github.com/ahmadrazainbox/over-the-shoulder#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahmadrazainbox/over-the-shoulder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ahmadrazainbox/over-the-shoulder/issues"
+  },
   "type": "module",
   "scripts": {
     "icons": "node scripts/make-icons.mjs",

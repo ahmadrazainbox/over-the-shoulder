@@ -2,6 +2,10 @@
 
 **See what your AI agent did, not just what it wrote.**
 
+[![tests](https://github.com/ahmadrazainbox/over-the-shoulder/actions/workflows/test.yml/badge.svg)](https://github.com/ahmadrazainbox/over-the-shoulder/actions/workflows/test.yml)
+[![release](https://img.shields.io/github/v/release/ahmadrazainbox/over-the-shoulder)](https://github.com/ahmadrazainbox/over-the-shoulder/releases/latest)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+
 AI coding agents write code fast. Seeing what the change actually does in the running app is the slow
 part. Over the Shoulder lets your agent show you, in your own Chrome, one visible step at a time:
 
@@ -78,39 +82,47 @@ window.dispatchEvent(new CustomEvent('over-the-shoulder', {
 }))
 ```
 
-`detail` must be a JSON string. All fields are optional: `step` (badge), `label` (finding, up to 200
-characters), `say` (spoken if voice is on, up to 300 characters), `selector` (the step's own target, a
-CSS selector in the top page; not found sends the step to the corner toast), `at` (`{ x, y }` in the
-page's CSS pixels, instead of `selector`), `log` (`true` writes the page's log of what was drawn),
-`summary` (`true` shows the findings sent with a `label` as one list in the bottom-left corner, one line
-per step with its latest finding (a `label` sent without a `step` beside a step's badge counts as that
-step's), for one screenshot at the end of a run; the newest always show, and older ones that do not fit
-are counted; it goes at the next action or step, or a navigation) and `clear` (`true` forgets those
-findings, to start a new run, and takes the last step's badge and finding away). The findings are kept
-for the page load (newest 50); a single-page app's route changes keep them.
-
-The overlay answers on its host element, `document.querySelector('[data-over-the-shoulder]')`:
-`dataset.last` is what the latest step drew (`on`: the element, or `toast`; after `summary` or `clear` on
-their own, `on` is `summary` with the number of `findings`), `dataset.log` the log as JSON
-(after `log: true`), `dataset.version` the extension's version. The skill reads these to check its report.
-On each page load the host is added only at the first step event with a `step`, `label`, `log`, `summary`
-or `clear`, or the first hover, click or typing it draws, so before that it is not there even when the overlay runs. To check
-that it runs, send a step 0 event, as the skill does, and look for the toast.
-
-One step badge and one finding label show at a time. They follow their element as the page scrolls, and
-clear when the agent acts on another element or sends a step for another target (or one whose `selector`
-matches nothing, or a new step with nothing lit since the last one), when the element is removed or
-replaced by a different-looking one, when the page navigates, when the agent acts inside an iframe, or 60
-seconds after the element was lit. A step on the same element without a `label` keeps the previous finding
-beside its new badge, and a `label` without a `step` keeps the previous badge. So a screenshot usually
-shows one step's result; to show the run's results together, send `summary: true` at the end.
-
-A select chosen with the mouse logs a click and then typing (a value was entered). Rows a "Select all"
-ticks while its click is handled are part of that click; rows ticked later, in a timer, log as typing.
+`detail` must be a JSON string. All fields are optional: `step` (a badge), `label` (a finding), `say`
+(spoken if voice is on), `selector` (the step's own target), `log`, `summary` and `clear`. The overlay
+answers on its own element, so the agent can check what it drew. Every field, the answers, and what clears
+a badge: [docs/step-event.md](docs/step-event.md).
 
 Any script on a page where the overlay runs can send this event, not only your agent, and could also draw
 look-alike marks of its own. So treat the overlay as a guide to follow the agent, not as proof of what it
 did; the agent's chat and its final report are the record. Enable the extension only on sites you trust.
+
+## How it works
+
+```mermaid
+flowchart LR
+  A[Your AI agent] -->|clicks, typing| B[Its browser tool<br>e.g. Claude in Chrome]
+  B --> C[Your Chrome tab]
+  C -->|real input events| D[Over the Shoulder<br>overlay]
+  A -.->|step event: number,<br>finding, spoken line| D
+  D -->|outline, ripple, badge, voice| E[You, watching]
+```
+
+The agent drives the browser with its own tool; the overlay only watches the real input events that reach
+the page and draws where they land. The skill tells the agent when to send a step number, a finding or a
+line to speak, and to read back what was drawn before it reports.
+
+## FAQ
+
+**Does it control the browser?** No. Your agent's own browser tool does the clicking and typing; Over the
+Shoulder only draws on top.
+
+**Which agents does it work with?** Claude Code with Claude in Chrome today. Codex and Google Antigravity
+are coming soon.
+
+**Does it see what I type?** No. It never reads field values or keys; the log names elements only. See
+[PRIVACY.md](PRIVACY.md).
+
+**Why are my own clicks not shown?** By design: only the agent's actions are drawn. Turn on **Also show my
+own clicks** in the popup to see yours too.
+
+**Why Developer mode?** It is not in the Chrome Web Store yet (planned for 1.0), so it is loaded unpacked.
+
+**Found a security problem?** Please report it privately; see [SECURITY.md](SECURITY.md).
 
 ## Privacy
 
