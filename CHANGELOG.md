@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- An overlay left behind after the extension is reloaded no longer adds listeners to shadow roots the
+  developer clicks through (it already drew and logged nothing).
+
 ## 0.2.4 (2026-11-07)
 
 - A "Select all" inside a shadow root whose `change` handler ticks the rows is now the click's, like one
