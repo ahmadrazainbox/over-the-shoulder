@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- The overlay is kept out of the accessibility tree (`aria-hidden`), so a screen reader does not read its
+  badges and findings, and an agent reading the page's tree does not see its own labels.
+- With reduced motion turned on in the system, the outline no longer pulses or eases, and a click shows a
+  still ring that fades instead of growing.
+- README: shorter, with badges, a "How it works" diagram and a FAQ; every field of the step event moved to
+  [docs/step-event.md](docs/step-event.md). New SECURITY.md (private vulnerability reporting).
+- Repository: CI actions pinned to commit SHAs, Dependabot (monthly, grouped), CI keeps the JSON test
+  report when a run fails, a test that the release zip holds exactly the extension, `.editorconfig`, and
+  the plugin and package metadata point to the GitHub repository.
+
 ## 0.2.5 (2026-11-07)
 
 - An overlay left behind after the extension is reloaded no longer adds listeners to shadow roots the
