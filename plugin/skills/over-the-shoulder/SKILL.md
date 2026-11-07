@@ -183,16 +183,17 @@ Always in this shape, in plain words:
   drawn as a toast, so it cannot cite an element; say so.
 - **Overlay:** from the log, not from memory: which steps were drawn on their element, which went to the
   toast, and the extension version.
-- **Summary screenshot** (QA, or any run with findings): after the last step, send `{ summary: true }` on
-  its own, read `dataset.last` in the same call (`{ action: 'summary', findings: n }`), take one
+- **Summary screenshot** (QA, or any run with findings): after the last step, send `{ summary: true }`
+  on its own, read `dataset.last` in the same call (`{ action: 'summary', findings: n }`), take one
   screenshot of the list in the bottom-left corner, and cite it beside the per-step screenshots. It lists
   each step's latest `label` since the page loaded (a single-page app's route changes keep them, a page
-  load starts empty), so in a run across page loads, take one before each load; send `{ clear: true }`
-  first when a new run starts on the same page. To correct a wrong finding before the summary, send the
-  same `step` number again with the corrected `label` and `selector: '#ots-none'`: it replaces that
-  step's line, wherever the step was drawn (it also shows as the corner toast for 8 seconds). If
-  `dataset.last` is not a summary, the extension is older than this skill expects: skip it and say so
-  under Not checked. The list goes at the next hover or action, including the developer's mouse coming
-  back into the window, and at a URL change the page makes itself: if the screenshot shows no list, send
-  `{ summary: true }` again once and take another.
+  load starts empty, and a page Chrome brings back with Back or Forward keeps its own), so in a run
+  across page loads, take one before each load; send `{ clear: true }` first when a new run starts on the
+  same page. To correct a wrong finding before the summary, send the same `step` number again with the
+  corrected `label` and `selector: '#ots-none'`: it replaces that step's line, wherever the step was
+  drawn (it also shows as the corner toast for 8 seconds). If `dataset.last` is not a summary, the
+  extension is older than this skill expects: skip it and say so under Not checked. The list goes at the
+  next hover or action, including the developer's mouse coming back into the window, and at a URL change
+  the page makes itself: if the screenshot shows no list, send `{ summary: true }` again once and take
+  another.
 - **Not checked:** anything skipped, and why.

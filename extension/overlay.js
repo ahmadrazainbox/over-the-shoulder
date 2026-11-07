@@ -440,15 +440,23 @@
   let handling = null;
   const busy = () => handling !== null && handling.eventPhase !== 0;
   const box = (el) => el instanceof HTMLInputElement && ['checkbox', 'radio'].includes(el.type);
-  ['click', 'input', 'change'].forEach((type) => {
-    addEventListener(type, (e) => {
-      if (busy() || !e.isTrusted) { return; }
-      const el = hit(e);
-      if (!(el instanceof Element) || !byPress(el)) { return; }
-      if (type !== 'click' && !box(el)) { return; }
-      handling = e;
-    }, true);
-  });
+  const mark = (e) => {
+    if (busy() || !e.isTrusted) { return; }
+    const el = hit(e);
+    if (!(el instanceof Element) || !byPress(el)) { return; }
+    if (e.type !== 'click' && !box(el)) { return; }
+    handling = e;
+  };
+  ['click', 'input', 'change'].forEach((type) => addEventListener(type, mark, true));
+  // `change` does not leave a shadow root, so a select-all inside one would not be marked: each open shadow
+  // root a real press passes through gets the same listener, once.
+  const roots = new WeakSet();
+  addEventListener('pointerdown', (e) => {
+    if (!e.isTrusted) { return; }
+    e.composedPath().forEach((node) => {
+      if (node instanceof ShadowRoot && !roots.has(node)) { roots.add(node); node.addEventListener('change', mark, true); }
+    });
+  }, true);
   const toggled = (e) => {
     const el = hit(e);
     if (!box(el)) { return false; }
@@ -547,6 +555,8 @@
     if (dropped) { earlier.lastChild.textContent = `${dropped} earlier`; } else { earlier.remove(); }
   };
   // The step last shown on a target, and the light count at the time.
+  // A summary on screen is fitted again when the window changes size, so its newest lines stay in view.
+  addEventListener('resize', () => { if (shown(summary)) { showSummary(); } });
   let shownStep = { step: '', lights: -1 };
   let saidAt = -Infinity;
   addEventListener(EVENT, (e) => {
