@@ -425,11 +425,29 @@
   // A checkbox or radio toggled by a real press on it (or on its label) fires a trusted input and change: the
   // click is the record, so those are not typing. One set by a script, toggled with Space or chosen with
   // the arrow keys still counts (a script's el.click() also fires trusted input and change, with no press).
+  const byPress = (el) => performance.now() - pressed.at <= 1000 && pressed.on instanceof Node
+    && (el.contains(pressed.on) || [...(el.labels || [])].some((labelEl) => labelEl.contains(pressed.on)));
+  // The page's own handlers for a real click can toggle other checkboxes by script (a "Select all" that
+  // clicks each row, or sets them and announces it): those are that click's doing too, while its click,
+  // input or change is still being dispatched, never after (a finished event's eventPhase is 0, even when
+  // the page stopped it), so a script's own click a moment later still counts.
+  let handling = null;
+  const busy = () => handling !== null && handling.eventPhase !== 0;
+  const box = (el) => el instanceof HTMLInputElement && ['checkbox', 'radio'].includes(el.type);
+  ['click', 'input', 'change'].forEach((type) => {
+    addEventListener(type, (e) => {
+      if (busy() || !e.isTrusted) { return; }
+      const el = hit(e);
+      if (!(el instanceof Element) || !byPress(el)) { return; }
+      if (type !== 'click' && !box(el)) { return; }
+      handling = e;
+    }, true);
+  });
   const toggled = (e) => {
     const el = hit(e);
-    if (!e.isTrusted || !(el instanceof HTMLInputElement) || !['checkbox', 'radio'].includes(el.type)) { return false; }
-    if (performance.now() - pressed.at > 1000 || !(pressed.on instanceof Node)) { return false; }
-    return el.contains(pressed.on) || [...(el.labels || [])].some((labelEl) => labelEl.contains(pressed.on));
+    if (!box(el)) { return false; }
+    if (busy() && handling !== e) { return true; }
+    return e.isTrusted && byPress(el);
   };
   addEventListener('keydown', (e) => { if (e.isTrusted) { typed(e); } }, true);
   addEventListener('input', (e) => { if (!toggled(e)) { typed(e); } }, true);

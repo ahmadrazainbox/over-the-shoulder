@@ -764,6 +764,74 @@ test("a script's click on a checkbox, and an arrow key in a radio group, still c
   expect(log).toContainEqual(expect.objectContaining({ action: 'type', on: 'radio "Two"' }));
 });
 
+test('rows a real click on "Select all" toggles by script are that click, not typing; a script select-all is typing', async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <label><input id="c-all" type="checkbox"> Select all</label>
+      <label><input class="c-row" type="checkbox"> Row one</label>
+      <label><input class="c-row" type="checkbox"> Row two</label>
+    </section>`);
+    document.querySelector('#c-all').addEventListener('change', (e) => {
+      document.querySelectorAll('.c-row').forEach((row) => { if (row.checked !== e.target.checked) { row.click(); } });
+    });
+  });
+  await page.click('#c-all');
+  await page.waitForTimeout(1100);
+  const byClick = (await drawnLog(page)).filter((entry) => ['click', 'type'].includes(entry.action)).map((entry) => `${entry.action} ${entry.on}`);
+  expect(byClick).toEqual(['click checkbox "Select all"']);
+  expect(await page.locator('.c-row:checked').count()).toBe(2);
+  // The same select-all run by a script (an agent's form tool) still counts as typing.
+  await page.evaluate(() => document.querySelector('#c-all').click());
+  await page.waitForTimeout(200);
+  const after = (await drawnLog(page)).filter((entry) => entry.action === 'type').map((entry) => entry.on);
+  expect(after.length).toBeGreaterThan(0);
+  expect(await page.locator('.c-row:checked').count()).toBe(0);
+});
+
+test("a page that stops a real click's events, or announces rows itself, still gets the next script click logged", async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <label><input id="s-all" type="checkbox"> Stop all</label>
+      <label><input class="s-row" type="checkbox"> Stop row</label>
+      <label><input id="s-other" type="checkbox"> Other box</label>
+    </section>`);
+    const all = document.querySelector('#s-all');
+    ['click', 'change'].forEach((type) => all.addEventListener(type, (e) => e.stopPropagation()));
+    // Rows set by script and announced with the page's own (untrusted) events, during the real click.
+    all.addEventListener('change', () => {
+      document.querySelectorAll('.s-row').forEach((row) => {
+        row.checked = all.checked;
+        row.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+  });
+  await page.click('#s-all');
+  // The agent's form tool, straight after, in the same moment: still typing.
+  await page.evaluate(() => document.querySelector('#s-other').click());
+  await page.waitForTimeout(200);
+  const seen = (await drawnLog(page)).filter((entry) => ['click', 'type'].includes(entry.action)).map((entry) => `${entry.action} ${entry.on}`);
+  expect(seen).toEqual(['click checkbox "Stop all"', 'type checkbox "Other box"']);
+  expect(await page.locator('.s-row').isChecked()).toBe(true);
+});
+
+test('Space on a select-all, after a real press elsewhere, counts its rows as typing', async ({ page }) => {
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('afterbegin', `<section>
+      <label><input id="k-all" type="checkbox"> Key all</label>
+      <label><input class="k-row" type="checkbox"> Key row</label>
+    </section>`);
+    document.querySelector('#k-all').addEventListener('click', (e) => {
+      document.querySelectorAll('.k-row').forEach((row) => { if (row.checked !== e.target.checked) { row.click(); } });
+    });
+  });
+  await page.click('#save');
+  await page.locator('#k-all').focus();
+  await page.keyboard.press('Space');
+  const typedOn = (await drawnLog(page)).filter((entry) => entry.action === 'type').map((entry) => entry.on);
+  expect(typedOn).toContain('checkbox "Key row"');
+  expect(await page.locator('.k-row').isChecked()).toBe(true);
+});
+
 test("a checkbox the agent's form tool sets by script, and Space on a checkbox, still count as typing", async ({ page }) => {
   await page.evaluate(() => {
     document.body.insertAdjacentHTML('afterbegin', `<section>

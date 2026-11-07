@@ -9,6 +9,8 @@
 - Clicking a checkbox or radio, or its label, no longer adds a typing entry after the click (#25): the
   trusted input and change that follow a real press on it are the click's own. One set or clicked by a
   script (an agent's form tool), toggled with Space or chosen with the arrow keys still counts as typing.
+  Rows a real click on a "Select all" toggles by script, while the page handles that click, are the
+  click's too; the same select-all run by a script still counts as typing.
 
 ## 0.2.2 (2026-11-06)
 
