@@ -453,7 +453,7 @@
   // root a real press passes through gets the same listener, once.
   const roots = new WeakSet();
   addEventListener('pointerdown', (e) => {
-    if (!e.isTrusted) { return; }
+    if (gone() || !e.isTrusted) { return; }
     e.composedPath().forEach((node) => {
       if (node instanceof ShadowRoot && !roots.has(node)) { roots.add(node); node.addEventListener('change', mark, true); }
     });
@@ -555,9 +555,9 @@
     }
     if (dropped) { earlier.lastChild.textContent = `${dropped} earlier`; } else { earlier.remove(); }
   };
-  // The step last shown on a target, and the light count at the time.
   // A summary on screen is fitted again when the window changes size, so its newest lines stay in view.
   addEventListener('resize', () => { if (!gone() && shown(summary)) { showSummary(); } });
+  // The step last shown on a target, and the light count at the time.
   let shownStep = { step: '', lights: -1 };
   let saidAt = -Infinity;
   addEventListener(EVENT, (e) => {
