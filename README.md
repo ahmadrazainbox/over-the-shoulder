@@ -83,9 +83,9 @@ window.dispatchEvent(new CustomEvent('over-the-shoulder', {
 ```
 
 `detail` must be a JSON string. All fields are optional: `step` (a badge), `label` (a finding), `say`
-(spoken if voice is on), `selector` (the step's own target), `log`, `summary` and `clear`. The overlay
-answers on its own element, so the agent can check what it drew. Every field, the answers, and what clears
-a badge: [docs/step-event.md](docs/step-event.md).
+(spoken if voice is on), `selector` (the step's own target), `at`, `log`, `summary` and `clear`. The
+overlay answers on its own element, so the agent can check what it drew. Every field, the answers, and
+what clears a badge: [docs/step-event.md](docs/step-event.md).
 
 Any script on a page where the overlay runs can send this event, not only your agent, and could also draw
 look-alike marks of its own. So treat the overlay as a guide to follow the agent, not as proof of what it
@@ -117,8 +117,9 @@ are coming soon.
 **Does it see what I type?** No. It never reads field values or keys; the log names elements only. See
 [PRIVACY.md](PRIVACY.md).
 
-**Why are my own clicks not shown?** By design: only the agent's actions are drawn. Turn on **Also show my
-own clicks** in the popup to see yours too.
+**Why are my own clicks not shown?** By design: it draws only what it takes for the agent's actions (a
+best guess; see [What you see](#what-you-see)). Turn on **Also show my own clicks** in the popup to see
+yours too.
 
 **Why Developer mode?** It is not in the Chrome Web Store yet (planned for 1.0), so it is loaded unpacked.
 
