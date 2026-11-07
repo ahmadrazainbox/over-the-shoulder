@@ -22,8 +22,9 @@ This skill is written for extension version 0.2.2.
    any other site needs **Enable on this site** in the extension's popup. Ask the developer to do that if
    needed. You cannot click Chrome's own permission dialog. Wait until the page has finished loading
    (`document.readyState` is `complete` and the content you expect is there) before the first step.
-3. Check the overlay before the first step: send a step event with nothing lit, e.g.
-   `{ step: 0, label: 'Overlay check' }`, and take a screenshot; a toast should show in the bottom-right
+3. Check the overlay before the first step: send a step event with a `selector` that matches nothing,
+   e.g. `{ step: 0, label: 'Overlay check', selector: '#ots-none' }` (without one, it lands on whatever an
+   earlier action on the page lit), and take a screenshot; a toast should show in the bottom-right
    corner. Then hover the first target and screenshot again for the red outline. A hover that lands close
    to where the pointer already was is deliberately not lit (it looks like the developer's own mouse), so
    a missing outline after a hover alone does not prove the extension is missing; the toast is the check.
@@ -49,11 +50,12 @@ This skill is written for extension version 0.2.2.
   window.dispatchEvent(new CustomEvent('over-the-shoulder', { detail: JSON.stringify({ step: 4, selector: '#save-invoice', say: 'Now I save the invoice. Watch the total.' }) }))
   ```
   Name the target with `selector`: an id, `name` or `aria-label` you saw in `read_page`, such as
-  `'[aria-label="Total"]'`. If the target has none (an option in a search list), build one from the page's
-  structure, such as `'#product-list > li:nth-child(5)'`, and check that
-  `document.querySelectorAll(selector).length` is 1 in the same call. Do not pass your hover or click
-  coordinates as `at`: browser tools scale them from screenshot pixels, so they do not match the page's
-  own (see `references/tools.md`). Without a
+  `'[aria-label="Total"]'`. If the target has none (an option in a search list), build one from the
+  page's structure, such as `'#product-list > li:nth-child(5)'`. Whatever its source (`find` names
+  included), check that `document.querySelectorAll(selector).length` is 1 in the same call, and do not
+  act until it is: with more than one match, the step goes on the first, which may not be the one you
+  will click. Do not pass your hover or click coordinates as `at`: browser tools scale them from
+  screenshot pixels, so they do not match the page's own (see `references/tools.md`). Without a
   `selector`, a step after a short hover hop could land on the previous step's element; the overlay then
   shows it in the corner toast rather than guess.
 - **Read back** what the step drew, in the same JavaScript call that sends it:
@@ -79,7 +81,8 @@ This skill is written for extension version 0.2.2.
   list still loading), and some real clicks are not logged (a target larger than half the page, a click
   where the developer's own pointer rests). Do it again only if the screenshot shows it did not happen,
   and never repeat a click that saves, submits, sends or deletes: ask the developer. Ask them not to
-  scroll while you click.
+  scroll while you click. A hover where the pointer already is (on the spot just clicked) adds no entry;
+  that is not a failure.
 - **Type straight after the click** that focused the field, and check the click afterwards. The overlay
   draws typing as yours when your click was the last pointer action, so a pause (even to read the log)
   lets the developer's own typing be drawn as yours.
@@ -134,7 +137,9 @@ on what it is for.
 4. Repeat the same steps in the browser to prove the fix.
 
 **QA** (a checklist). Mark each step Pass or Fail with the evidence; a Fail names the step, what was
-expected and what happened.
+expected and what happened. An item that cannot be run (no test data, a page that will not load, an
+earlier item it depends on) is Not checked, with the reason, never Pass or Fail. Before calling an item
+blocked by missing data, ask the developer for a search term or the name of a test record.
 
 Give every finding a severity: **Major** if it could mislead a user, lose or misdate data, or touch money
 or deadlines; **Minor** for wording or display.
@@ -146,7 +151,8 @@ always harmless: with voice off it is ignored. Ask once at the start whether the
 so:
 - one or two short sentences per step, in plain words: the point and where to look;
 - send `say` with the hover, before the action, so their eyes are already in the right place;
-- at the end of each point, one sentence on what it showed;
+- at the end of each point, one sentence on what it showed (`say` goes out only with a step, so put it
+  at the start of the next step's `say`, or send it with the last step of the run);
 - never speak a password, a token, personal data, or anything from a real customer's records.
 
 ## 5. Safety
@@ -178,12 +184,15 @@ Always in this shape, in plain words:
 - **Overlay:** from the log, not from memory: which steps were drawn on their element, which went to the
   toast, and the extension version.
 - **Summary screenshot** (QA, or any run with findings): after the last step, send `{ summary: true }` on
-  its own, read `dataset.last` in the same call (`{ action: 'summary', findings: n }`), take one screenshot
-  of the list in the bottom-left corner, and cite it beside the per-step screenshots. It lists each step's
-  latest `label` since the page loaded (a single-page app's route changes keep them, a page load starts
-  empty), so in a run across page loads, take one before each load; send `{ clear: true }` first when a new
-  run starts on the same page. If `dataset.last` is not a summary, the extension is older than this skill
-  expects: skip it and say so under Not checked. The list goes at the next hover or action, including the
-  developer's mouse coming back into the window, and at a URL change the page makes itself: if the
-  screenshot shows no list, send `{ summary: true }` again once and take another.
+  its own, read `dataset.last` in the same call (`{ action: 'summary', findings: n }`), take one
+  screenshot of the list in the bottom-left corner, and cite it beside the per-step screenshots. It lists
+  each step's latest `label` since the page loaded (a single-page app's route changes keep them, a page
+  load starts empty), so in a run across page loads, take one before each load; send `{ clear: true }`
+  first when a new run starts on the same page. To correct a wrong finding before the summary, send the
+  same `step` number again with the corrected `label` and `selector: '#ots-none'`: it replaces that
+  step's line, wherever the step was drawn (it also shows as the corner toast for 8 seconds). If
+  `dataset.last` is not a summary, the extension is older than this skill expects: skip it and say so
+  under Not checked. The list goes at the next hover or action, including the developer's mouse coming
+  back into the window, and at a URL change the page makes itself: if the screenshot shows no list, send
+  `{ summary: true }` again once and take another.
 - **Not checked:** anything skipped, and why.

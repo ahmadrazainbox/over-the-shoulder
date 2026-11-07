@@ -5,7 +5,7 @@ this version; the other columns are filled in as each agent is tested.
 
 | Action | Claude in Chrome |
 |---|---|
-| Find a target | `find` or `read_page` (gives a `ref`); for a step's `selector`, an id, `name` or `aria-label` from `read_page`, or read the element's id from the page if `read_page` shows none; with no id either, a selector from the page's structure that matches one element |
+| Find a target | `find` or `read_page` (gives a `ref`); for a step's `selector`, an id, `name` or `aria-label` from `read_page`, or read the element's id from the page if `read_page` shows none (an id that looks numbered, such as `product-search-1-input`, can change between loads: check its count each time); with no id either, a selector from the page's structure that matches one element |
 | Hover | `computer` with `action: "hover"` and the `ref` (or coordinates) |
 | Click | `computer` with `action: "left_click"` on the same `ref` |
 | Type | click the field, then `computer` with `action: "type"` (typing shows only after your own hover or click); to replace a value in a one-line field, `triple_click` it first (logged as three clicks); in a text area that selects one paragraph only, so click and press `cmd+a` (`ctrl+a` off macOS) instead |
@@ -21,6 +21,9 @@ Notes for Claude in Chrome:
   developer sees the real interaction.
 - A click through `javascript_tool` (`element.click()`) is not drawn: it arrives without pointer events
   and is untrusted. Click with `computer` instead.
+- Keys inside a field (`cmd+a`, Backspace, typing) are logged as typing on that field, and a run of
+  typing in one field is a single entry, so `cmd+a` and the typing after it make one entry (a step event
+  sent between them splits it in two).
 - `key` presses outside a field (Escape to close a dialog, Enter on a focused button) are not drawn; say
   in chat which key you press and why.
 - `scroll` is not drawn and does not light anything; hover the next target after scrolling to it.
