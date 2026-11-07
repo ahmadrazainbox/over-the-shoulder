@@ -391,8 +391,11 @@
   // and the developer's presses came 100 ms or more after any such step. A developer who clicks within
   // 40 ms of such a flick is taken for the agent; an agent click landing within 200px of the moving hand,
   // or within 4px of where the developer's pointer rests, is missed.
+  // Where and when the last real press landed, so a checkbox's own input and change can be told from typing.
+  let pressed = { on: null, at: -Infinity };
   addEventListener('pointerdown', (e) => {
     if (gone() || !e.isTrusted) { return; }
+    pressed = { on: hit(e), at: performance.now() };
     const mine = e.timeStamp - jumpedAt >= 40 && near(hand, e, 4) && hand.streak >= 3;
     acted(mine ? 'hand' : 'agent');
     if (mine && !showMine) { return; }
@@ -419,13 +422,40 @@
     const r = el.getBoundingClientRect();
     light(el, r.left + r.width / 2, r.top + r.height / 2, { quiet: true, action: 'type', trusted: e.isTrusted, by: actor === 'agent' ? 'agent' : 'hand' });
   };
+  // A checkbox or radio toggled by a real press on it (or on its label) fires a trusted input and change: the
+  // click is the record, so those are not typing. One set by a script, toggled with Space or chosen with
+  // the arrow keys still counts (a script's el.click() also fires trusted input and change, with no press).
+  const byPress = (el) => performance.now() - pressed.at <= 1000 && pressed.on instanceof Node
+    && (el.contains(pressed.on) || [...(el.labels || [])].some((labelEl) => labelEl.contains(pressed.on)));
+  // The page's own handlers for a real click can toggle other checkboxes by script (a "Select all" that
+  // clicks each row, or sets them and announces it): those are that click's doing too, while its click,
+  // input or change is still being dispatched, never after (a finished event's eventPhase is 0, even when
+  // the page stopped it), so a script's own click a moment later still counts.
+  let handling = null;
+  const busy = () => handling !== null && handling.eventPhase !== 0;
+  const box = (el) => el instanceof HTMLInputElement && ['checkbox', 'radio'].includes(el.type);
+  ['click', 'input', 'change'].forEach((type) => {
+    addEventListener(type, (e) => {
+      if (busy() || !e.isTrusted) { return; }
+      const el = hit(e);
+      if (!(el instanceof Element) || !byPress(el)) { return; }
+      if (type !== 'click' && !box(el)) { return; }
+      handling = e;
+    }, true);
+  });
+  const toggled = (e) => {
+    const el = hit(e);
+    if (!box(el)) { return false; }
+    if (busy() && handling !== e) { return true; }
+    return e.isTrusted && byPress(el);
+  };
   addEventListener('keydown', (e) => { if (e.isTrusted) { typed(e); } }, true);
-  addEventListener('input', typed, true);
+  addEventListener('input', (e) => { if (!toggled(e)) { typed(e); } }, true);
   // A text field fires a trusted change only when it loses focus (or on Enter), after its typing was drawn
   // from its keys: drawn again, it would outline the field just left, beside the click that left it.
   const TEXT = ['text', 'search', 'email', 'url', 'tel', 'password', 'number'];
   const left = (el) => el instanceof Element && (el.matches('textarea') || (el.matches('input') && TEXT.includes(el.type)));
-  addEventListener('change', (e) => { if (!(e.isTrusted && left(hit(e)))) { typed(e); } }, true);
+  addEventListener('change', (e) => { if (!(toggled(e) || (e.isTrusted && left(hit(e))))) { typed(e); } }, true);
 
   // A page that changes without a reload would otherwise keep a spotlight on an element now elsewhere.
   // Cleared a moment later, so the click that caused the navigation is still seen.
