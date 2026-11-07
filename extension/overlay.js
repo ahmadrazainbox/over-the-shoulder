@@ -10,7 +10,7 @@
 //
 // It draws only. It reads no field values, never looks at which key was pressed, and stores nothing; it
 // keeps a short in-memory list of what it drew (element role and visible name), which the agent can read
-// back to check its report.
+// back to check its report, and the agent's own findings (`label` text) for the summary.
 //
 // Agents add a step number, a label for a finding, or a line to speak, by running this in the page
 // (detail is a JSON string because the page and this script run in separate JavaScript worlds):
@@ -51,7 +51,7 @@
   const root = host.attachShadow({ mode: 'open' });
   const css = `
     * { box-sizing: border-box; }
-    .spot, .ripple, .label, .badge, .toast { position: absolute; pointer-events: none; display: none; }
+    .spot, .ripple, .label, .badge, .toast, .summary { position: absolute; pointer-events: none; display: none; }
     .spot { border-radius: 8px; border: 3px solid #E10600;
       box-shadow: 0 0 0 9999px rgba(15,23,32,.35), 0 0 0 4px rgba(225,6,0,.25), 0 0 18px 4px rgba(225,6,0,.55);
       transition: box-shadow .6s ease, border-color .6s ease; animation: pulse 1.1s ease-in-out infinite; }
@@ -65,11 +65,15 @@
     .ripple { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 3px solid #E10600;
       display: block; animation: ripple .9s ease-out forwards; }
     @keyframes ripple { to { transform: scale(5); opacity: 0; } }
-    .label, .toast { max-width: min(380px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 8px;
+    .label, .toast, .summary { max-width: min(380px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 8px;
       background: #14202B; color: #fff; font: 600 13px/1.35 system-ui, sans-serif;
       border: 1px solid rgba(255,255,255,.4); border-left: 4px solid #E10600; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
     .toast { right: 16px; bottom: 16px; }
-    .toast b { display: inline-block; min-width: 20px; margin-right: 6px; padding: 0 6px; border-radius: 10px;
+    /* The run's findings, on request: bottom-left, away from the toast and the page's own main button. */
+    .summary { left: 16px; bottom: 16px; max-width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+      overflow: hidden; overflow-wrap: anywhere; }
+    .summary div { margin: 3px 0; }
+    .toast b, .summary b { display: inline-block; min-width: 20px; margin-right: 6px; padding: 0 6px; border-radius: 10px;
       background: #E10600; text-align: center; }
   `;
   try {
@@ -84,6 +88,7 @@
   const badge = part('badge');
   const label = part('label');
   const toast = part('toast');
+  const summary = part('summary');
   const shown = (el) => el.style.display === 'block';
   const show = (el) => { el.style.display = 'block'; };
   const hide = (el) => { el.style.display = 'none'; };
@@ -290,6 +295,7 @@
     const entry = action ? record({ action, on: is, trusted, by }, chosen) : null;
     const same = chosen === target;
     if (!same) { raise(); hide(badge); hide(label); }
+    hide(summary);
     targetIs = is;
     stranger = false;
     target = chosen;
@@ -459,9 +465,9 @@
 
   // A page that changes without a reload would otherwise keep a spotlight on an element now elsewhere.
   // Cleared a moment later, so the click that caused the navigation is still seen.
-  const endSoon = () => { clearTimeout(endTimer); endTimer = setTimeout(end, 600); };
+  const endSoon = () => { clearTimeout(endTimer); endTimer = setTimeout(() => { end(); hide(summary); }, 600); };
   addEventListener('popstate', endSoon);
-  addEventListener('pageshow', (e) => { if (e.persisted) { end(); loadedAt = performance.now(); } });
+  addEventListener('pageshow', (e) => { if (e.persisted) { end(); hide(summary); loadedAt = performance.now(); } });
   document.addEventListener('inertia:navigate', endSoon);
   window.navigation?.addEventListener?.('navigate', endSoon);
 
@@ -478,7 +484,7 @@
   // belongs in the corner toast, not on it.
   addEventListener('message', (e) => {
     if (gone()) { return; }
-    if (e.data?.overTheShoulder === 'lit' && ownFrame(window, e.source, 0)) { end(); }
+    if (e.data?.overTheShoulder === 'lit' && ownFrame(window, e.source, 0)) { end(); hide(summary); }
   });
 
   // Step numbers, finding labels and spoken lines from the agent. With nothing lit (the target is in an
@@ -493,6 +499,52 @@
     const x = Number(detail.at?.x);
     const y = Number(detail.at?.y);
     return Number.isFinite(x) && Number.isFinite(y) ? deepAt(x, y) : null;
+  };
+  // The findings the agent sent with its steps (`label`), kept for the summary: the agent's own words, not
+  // read from the page. A step sent again with a new finding replaces its line in place. Kept for this page
+  // load (a single-page app's route changes keep them), newest 50. `at` orders them by when each was last
+  // sent, so the newest are the ones kept; `forgot` counts those dropped past 50, for the "earlier" line.
+  const results = [];
+  let sent = 0;
+  let forgot = 0;
+  // Steps dropped past 50: one sent again is back in the list, so it is no longer counted as earlier.
+  const forgotSteps = new Set();
+  const oldest = (list) => list.reduce((o, r, i) => (r.at < list[o].at ? i : o), 0);
+  const keep = (step, text) => {
+    if (!text) { return; }
+    const i = step ? results.findIndex((r) => r.step === step) : -1;
+    if (i >= 0) { results[i] = { step, text, at: ++sent }; return; }
+    if (forgotSteps.delete(step)) { forgot--; }
+    results.push({ step, text, at: ++sent });
+    if (results.length > 50) {
+      const [gone] = results.splice(oldest(results), 1);
+      forgot++;
+      if (gone.step) { forgotSteps.add(gone.step); }
+    }
+  };
+  // One list of them in the corner, for a screenshot at the end of a run. Text only, never markup. The
+  // newest lines always show: when they do not all fit, the oldest go and are counted as "earlier".
+  const showSummary = () => {
+    const line = (b, text) => {
+      const div = document.createElement('div');
+      if (b) { div.append(Object.assign(document.createElement('b'), { textContent: b })); }
+      div.append(document.createTextNode(text));
+      return div;
+    };
+    raise();
+    hide(toast);
+    summary.replaceChildren();
+    show(summary);
+    if (!results.length) { summary.append(line('', 'No findings on this page yet')); return; }
+    const earlier = line('…', '');
+    const lines = results.map((r) => ({ at: r.at, el: line(r.step || '•', r.text) }));
+    summary.append(earlier, ...lines.map((l) => l.el));
+    let dropped = forgot;
+    while (lines.length > 1 && summary.scrollHeight > summary.clientHeight) {
+      lines.splice(oldest(lines), 1)[0].el.remove();
+      dropped++;
+    }
+    if (dropped) { earlier.lastChild.textContent = `${dropped} earlier`; } else { earlier.remove(); }
   };
   // The step last shown on a target, and the light count at the time.
   let shownStep = { step: '', lights: -1 };
@@ -519,7 +571,19 @@
         host.dataset.log = JSON.stringify(log);
       }
     };
+    // `clear` forgets the findings kept for the summary (a new run); `summary` shows them in one list, after
+    // this event's own step and finding, if it has them.
+    // A new run: the last run's badge and finding go too, so a finding sent next without a step is not
+    // filed under the old step's number.
+    if (detail.clear) { results.length = 0; forgot = 0; forgotSteps.clear(); [summary, badge, label].forEach(hide); }
+    if (!step && !text && (detail.summary || detail.clear)) {
+      if (detail.summary) { showSummary(); } else { raise(); }
+      answer(record({ action: detail.summary ? 'summary' : 'clear', on: 'summary', findings: results.length }));
+      return;
+    }
     if (!step && !text) { answer(null); return; }
+    // Any step or finding is the run going on: the summary, if shown, makes way.
+    hide(summary);
     // Every step comes to the front, above a dialog or popover the agent's last click may have opened.
     raise();
     if (detail.selector !== undefined || detail.at !== undefined) {
@@ -546,7 +610,9 @@
       show(toast);
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(toast), text ? 8000 : 4000);
+      keep(step, text);
       answer(record({ action: 'step', step, on: 'toast', label: Boolean(text) }));
+      if (detail.summary) { showSummary(); }
       return;
     }
     if (step) {
@@ -563,6 +629,9 @@
     draw();
     // What this step was drawn on, as it reads now (its text may have changed since it was lit).
     targetIs = describe(target);
+    // A finding with no step of its own sits beside the badge still shown, so it is that step's finding.
+    keep(step || (badge.style.display === 'block' ? badge.textContent : ''), text);
     answer(record({ action: 'step', step, on: targetIs, label: Boolean(text) }));
+    if (detail.summary) { showSummary(); }
   });
 })();
